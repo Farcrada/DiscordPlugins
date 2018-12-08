@@ -1,10 +1,10 @@
-//META{"name":"DoubleClickToEdit"}*,"displayName":"DoubleClickToEdit","website":"https://github.com/Farcrada/Double-click-to-edit","source":"https://github.com/Farcrada/blob/master/DoubleClickToEdit.plugin.js"}*//
+//META{"name":"DoubleClickToEdit","displayName":"DoubleClickToEdit","website":"https://github.com/Farcrada/dblClickEdit.plugin.js","source":"https://github.com/Farcrada/blob/master/dblClickEdit.plugin.js"}*//
 
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
     getVersion() { return "0.3.0"; }
-    getAuthor() { return "Original by Jiiks, conversion by Farcrada"; }
+    getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
         try {
