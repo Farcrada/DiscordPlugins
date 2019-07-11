@@ -3,10 +3,22 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "0.4.3"; }
+    getVersion() { return "0.5.0"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
+        let libraryScript = document.getElementById("ZLibraryScript");
+        if (!libraryScript || !window.ZLibrary) {
+            if (libraryScript) libraryScript.parentElement.removeChild(libraryScript);
+            libraryScript = document.createElement("script");
+            libraryScript.setAttribute("type", "text/javascript");
+            libraryScript.setAttribute("src", "https://rauenzi.github.io/BDPluginLibrary/release/ZLibrary.js");
+            libraryScript.setAttribute("id", "ZLibraryScript");
+            document.head.appendChild(libraryScript);
+        }
+
+        if (window.ZLibrary) this.initialize();
+
         try {
             document.addEventListener('dblclick', this.handler);
         }
@@ -20,6 +32,10 @@ class DoubleClickToEdit {
                 console.error(this.getName() + ".stop()", err);
             }
         }
+    }
+
+    initialize() {
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/Double-click-to-edit/master/DoubleClickToEdit.plugin.js");
     }
 
     stop() {
