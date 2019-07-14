@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "0.5.0"; }
+    getVersion() { return "0.6.0"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -58,30 +58,15 @@ class DoubleClickToEdit {
             return;
 
         const rii = popup[Object.keys(popup).find(k => k.startsWith('__reactInternal'))];
-
-        if (!rii || !rii.memoizedProps || !rii.memoizedProps.children)
+        if (!rii || !rii.memoizedProps || !rii.memoizedProps.children
+            || !rii.memoizedProps.children[3] || !rii.memoizedProps.children[3].props
+            || !rii.memoizedProps.children[3].props.onClick)
         {
             btn.click();
             return;
         }
 
-        for (var i = 0; i < rii.memoizedProps.children.length; i++)
-        {
-            if (!rii.memoizedProps.children[i])
-                continue;
-            if (!rii.memoizedProps.children[i].props)
-                continue;
-            if (!rii.memoizedProps.children[i].props.children)
-                continue;
-            if (!rii.memoizedProps.children[i].props.children.startsWith)
-                continue;
-            if (!rii.memoizedProps.children[i].props.children.startsWith('Edit'))
-                continue;
-            
-            rii.memoizedProps.children[i].props.onClick();
-            return;
-        }
-
-        btn.click();
+        rii.memoizedProps.children[3].props.onClick();
+        return;
     }
 }
