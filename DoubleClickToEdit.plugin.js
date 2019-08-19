@@ -59,14 +59,14 @@ class DoubleClickToEdit {
 
         const rii = popup[Object.keys(popup).find(k => k.startsWith('__reactInternal'))];
         if (!rii || !rii.memoizedProps || !rii.memoizedProps.children
-            || !rii.memoizedProps.children[3] || !rii.memoizedProps.children[3].props
-            || !rii.memoizedProps.children[3].props.onClick)
+            || !rii.memoizedProps.children[1] || !rii.memoizedProps.children[1].props
+            || !rii.memoizedProps.children[1].props.onClick)
         {
             btn.click();
             return;
         }
 
-        rii.memoizedProps.children[3].props.onClick();
+        rii.memoizedProps.children[1].props.onClick();
         return;
     }
 }
