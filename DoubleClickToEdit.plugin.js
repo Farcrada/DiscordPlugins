@@ -6,6 +6,9 @@ class DoubleClickToEdit {
     getVersion() { return "0.7.0"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
+    constructor () {
+    }
+
     start() {
         let libraryScript = document.getElementById("ZLibraryScript");
         if (!libraryScript || !window.ZLibrary) {
@@ -43,6 +46,10 @@ class DoubleClickToEdit {
     }
     
     handler(e) {
+        var editIndex = 1
+        if(BdApi.getPlugin("GoogleTranslateOption").started)
+            editIndex = 2;
+
         const message = e.target.closest('[class^=contentCozy]') || e.target.closest('[class^=messageCompact]');
         if (!message)
             return;
@@ -59,15 +66,14 @@ class DoubleClickToEdit {
 
         const rii = popup[Object.keys(popup).find(k => k.startsWith('__reactInternal'))];
         if (!rii || !rii.memoizedProps || !rii.memoizedProps.children
-            || !rii.memoizedProps.children.props || !rii.memoizedProps.children.props.children[1]
-            || !rii.memoizedProps.children.props.children[1].props
-            || !rii.memoizedProps.children.props.children[1].props.action)
+            || !rii.memoizedProps.children.props || !rii.memoizedProps.children.props.children[editIndex]
+            || !rii.memoizedProps.children.props.children[editIndex].props
+            || !rii.memoizedProps.children.props.children[editIndex].props.action)
         {
             btn.click();
             return;
         }
-
-        rii.memoizedProps.children.props.children[1].props.action();
+        rii.memoizedProps.children.props.children[editIndex].props.action();
         return;
     }
 }
