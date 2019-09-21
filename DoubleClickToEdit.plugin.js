@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "0.7.0"; }
+    getVersion() { return "0.7.5"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     constructor () {
