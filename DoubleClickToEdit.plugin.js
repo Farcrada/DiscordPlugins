@@ -3,11 +3,8 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "0.7.6"; }
+    getVersion() { return "0.7.7"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
-
-    constructor () {
-    }
 
     start() {
         let libraryScript = document.getElementById("ZLibraryScript");
