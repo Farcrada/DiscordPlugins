@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "0.7.7"; }
+    getVersion() { return "0.7.8"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -44,8 +44,11 @@ class DoubleClickToEdit {
     
     handler(e) {
         var editIndex = 1
-        if(BdApi.getPlugin("GoogleTranslateOption"))
-            if(BdApi.getPlugin("GoogleTranslateOption").started)
+        
+        if(BdApi.getPlugin("GoogleTranslateOption") || 
+           BdApi.getPlugin("PersonalPins"))
+            if(BdApi.getPlugin("GoogleTranslateOption").started || 
+               BdApi.getPlugin("PersonalPins").started)
                 editIndex = 2;
 
         const message = e.target.closest('[class^=contentCozy]') || e.target.closest('[class^=messageCompact]');
