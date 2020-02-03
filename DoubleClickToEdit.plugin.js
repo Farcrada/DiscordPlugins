@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "0.7.9"; }
+    getVersion() { return "7.9"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -51,7 +51,7 @@ class DoubleClickToEdit {
                 if(BdApi.getPlugin(conflictNames[i]).started)
                     editIndex++;
         
-        const message = e.target.closest('[class^=contentCozy]') || e.target.closest('[class^=messageCompact]');
+        const message = e.target.closest('[class^=contentCozy]');
         if (!message)
             return;
         
