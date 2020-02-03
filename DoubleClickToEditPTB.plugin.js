@@ -3,7 +3,7 @@
 class DoubleClickToEditPTB {
     getName() { return "Double click to edit PTB"; }
     getDescription() { return "Double click messages to edit them. (PTB version)"; }
-    getVersion() { return "8.0"; }
+    getVersion() { return "8.0.0"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
