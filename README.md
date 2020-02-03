@@ -1,4 +1,4 @@
-# Double-click-to-edit
+# Double-click-to-edit (NEW PTB (Public Test Build) VERSION UPLOADED!)
 New version of Jiiks' original (https://github.com/Jiiks/BetterDiscordApp/blob/master/Plugins/dblClickEdit.plugin.js). 
 
 Consider writing a review if you like this plugin: https://github.com/MrRobotjs/BetterDocs-React/issues/642
