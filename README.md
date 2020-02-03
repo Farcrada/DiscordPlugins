@@ -1,11 +1,11 @@
-# Double-click-to-edit
-## (NEW PTB (Public Test Build) VERSION UPLOADED!)
-New version of Jiiks' original (https://github.com/Jiiks/BetterDiscordApp/blob/master/Plugins/dblClickEdit.plugin.js). 
+### NEW PTB (Public Test Build) VERSION UPLOADED!
+See the `PTB.plugin.js`-file
 
-Consider writing a review if you like this plugin: https://github.com/MrRobotjs/BetterDocs-React/issues/642
+# Double-click-to-edit
+Double click a Discord message to quickly edit it. Inspired and new/updated version of [Jiiks' original](https://github.com/Jiiks/BetterDiscordApp/blob/master/Plugins/dblClickEdit.plugin.js). 
 
 # Requirements
-This plugin requires you to have (Bandaged) Better Discord installed: https://discordsource.com/download/
+This plugin requires you to have (Bandaged) Better Discord installed: https://betterdiscord.net/home/ (Simple press the big ol' download button and then download the desired installer).
 
 # Installation
 Download the `.plugin.js` file and put it inside your plugins folder
