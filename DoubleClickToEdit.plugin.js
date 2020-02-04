@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "7.9.0"; }
+    getVersion() { return "8.0.0"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -43,38 +43,29 @@ class DoubleClickToEdit {
     }
     
     handler(e) {
-        var editIndex = 1
-        var conflictNames = [ "PersonalPins", "GoogleTranslateOption" ]
-
-        for (var i = 0; i < conflictNames.length; i++)
-            if(BdApi.getPlugin(conflictNames[i]))
-                if(BdApi.getPlugin(conflictNames[i]).started)
-                    editIndex++;
-        
-        const message = e.target.closest('[class^=contentCozy]');
+        const message = e.target.closest('[class^=message]');
         if (!message)
             return;
         
-        const btn = message.querySelector('[class^=buttonContainer] [class^=button-]');
+        const btn = message.querySelector('[class^=buttonContainer] [class^=button-][aria-label=More]');
         if (!btn)
             return;
-        
         btn.click();
 
-        const popup = document.querySelector('[class^=container][role=menu]');
+        const popup = document.querySelector('[class^=contextMenu]');
         if (!popup)
             return;
 
         const rii = popup[Object.keys(popup).find(k => k.startsWith('__reactInternal'))];
-        if (!rii || !rii.memoizedProps || !rii.memoizedProps.children
-            || !rii.memoizedProps.children.props || !rii.memoizedProps.children.props.children[editIndex]
-            || !rii.memoizedProps.children.props.children[editIndex].props
-            || !rii.memoizedProps.children.props.children[editIndex].props.action)
+        if (!rii || !rii.memoizedProps || !rii.memoizedProps.children[0]
+            || !rii.memoizedProps.children[0].props || !rii.memoizedProps.children[0].props.children[0]
+            || !rii.memoizedProps.children[0].props.children[0].props
+            || !rii.memoizedProps.children[0].props.children[0].props.action)
         {
             btn.click();
             return;
         }
-        rii.memoizedProps.children.props.children[editIndex].props.action();
+        rii.memoizedProps.children[0].props.children[0].props.action();
         return;
     }
 }
