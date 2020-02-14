@@ -21,7 +21,8 @@ class DoubleClickToEdit {
         if (window.ZLibrary) this.initialize();
 
         try {
-            document.addEventListener('click', e => this.handler(e));
+            this.cb = e=> this.handler(e)
+            document.addEventListener('click', this.cb);
         }
         catch(err) {
             console.error(this.getName(), "fatal error, plugin could not be started!", err);
@@ -59,7 +60,7 @@ class DoubleClickToEdit {
     }
 
     stop() {
-        document.removeEventListener('click', this.handler);
+        document.removeEventListener('click', this.cb);
     }
     
     handler(e) {
