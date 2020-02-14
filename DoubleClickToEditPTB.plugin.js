@@ -67,8 +67,8 @@ class DoubleClickToEdit {
             var blacklist = {
                 contextSection: true
             };
-            var singlekey = getKey(instance);
-            return singlekey;
+            
+            return getKey(instance);
             
             function getKey(instance) {
                 var result = undefined;
