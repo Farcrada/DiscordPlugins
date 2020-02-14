@@ -7,6 +7,7 @@ class DoubleClickToEdit {
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
+        this.settings = { clickCount: 2 };
         let libraryScript = document.getElementById("ZLibraryScript");
         if (!libraryScript || !window.ZLibrary) {
             if (libraryScript) libraryScript.parentElement.removeChild(libraryScript);
@@ -20,7 +21,7 @@ class DoubleClickToEdit {
         if (window.ZLibrary) this.initialize();
 
         try {
-            document.addEventListener('dblclick', this.handler);
+            document.addEventListener('click', e => this.handler(e));
         }
         catch(err) {
             console.error(this.getName(), "fatal error, plugin could not be started!", err);
@@ -33,16 +34,38 @@ class DoubleClickToEdit {
             }
         }
     }
+    
+    getSettingsPanel() {
+        return new ZLibrary.Settings.SettingPanel(null,new ZLibrary.Settings.Textbox("Number of clicks", "How many consecutive clicks are required to edit the message", this.settings.clickCount,
+        txt => {
+            this.settings.clickCount = Number(txt) || 2;
+            ZLibrary.PluginUtilities.saveData("dblClickEdit", "settings", this.settings);
+        },
+        {placeholder: "2"})).getElement();
+        
+    }
+    
+    loadSettings() {
+        const storage = ZLibrary.PluginUtilities.loadData("dblClickEdit", "settings");
+        if (storage)
+            this.settings = storage;
+        else
+            ZLibrary.PluginUtilities.saveData("dblClickEdit", "settings", this.settings);
+    }
 
     initialize() {
         ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/Double-click-to-edit/master/DoubleClickToEdit.plugin.js");
+        this.loadSettings();
     }
 
     stop() {
-        document.removeEventListener('dblclick', this.handler);
+        document.removeEventListener('click', this.handler);
     }
     
     handler(e) {
+        if (e.which != 1 || e.detail<this.settings.clickCount)
+            return;
+        
         let messagediv = e.target.closest('[class^=message]');
 
         if (!messagediv)
