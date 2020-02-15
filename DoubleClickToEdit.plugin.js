@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.0"; }
+    getVersion() { return "9.0.1"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -63,6 +63,7 @@ class DoubleClickToEdit {
             var whitelist = {
                 memoizedProps: true,
                 child: true,
+                sibling: true
             };
             var blacklist = {
                 contextSection: true
