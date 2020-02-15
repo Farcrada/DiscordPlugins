@@ -1,9 +1,9 @@
-//META{"name":"DoubleClickToEdit","displayName":"DoubleClickToEdit","website":"https://github.com/Farcrada/Double-click-to-edit","source":"https://github.com/Farcrada/Double-click-to-edit/blob/master/DoubleClickToEdit.plugin.js"}*//
+//META{"name":"DoubleClickToEditPTB","displayName":"DoubleClickToEditPTB","website":"https://github.com/Farcrada/Double-click-to-edit","source":"https://github.com/Farcrada/Double-click-to-edit/blob/master/DoubleClickToEditPTB.plugin.js"}*//
 
-class DoubleClickToEdit {
-    getName() { return "Double click to edit"; }
-    getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.0"; }
+class DoubleClickToEditPTB {
+    getName() { return "Double click to edit PTB"; }
+    getDescription() { return "Double click messages to edit them. (PTB version)"; }
+    getVersion() { return "9.0.1"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -35,7 +35,7 @@ class DoubleClickToEdit {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/Double-click-to-edit/master/DoubleClickToEdit.plugin.js");
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/Double-click-to-edit/master/DoubleClickToEditPTB.plugin.js");
     }
 
     stop() {
@@ -63,6 +63,7 @@ class DoubleClickToEdit {
             var whitelist = {
                 memoizedProps: true,
                 child: true,
+                sibling: true
             };
             var blacklist = {
                 contextSection: true
