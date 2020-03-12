@@ -3,7 +3,7 @@
 class DoubleClickToEditPTB {
     getName() { return "Double click to edit PTB"; }
     getDescription() { return "Double click messages to edit them. (PTB version)"; }
-    getVersion() { return "9.0.1"; }
+    getVersion() { return "9.0.2"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -45,7 +45,7 @@ class DoubleClickToEditPTB {
     handler(e) {
         let messagediv = e.target.closest('[class^=message]');
 
-        if (!messagediv)
+        if (!messagediv || !messagediv.classList.contains('da-zalgo'))
             return;
 
         let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
