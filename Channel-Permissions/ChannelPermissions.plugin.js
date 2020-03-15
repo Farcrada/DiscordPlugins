@@ -1,9 +1,9 @@
-//META{"name":"ChannelPermissions","displayName":"ChannelPermissions","website":"https://github.com/Farcrada/Channel-Permissions","source":"https://github.com/Farcrada/Channel-Permissions/blob/master/ChannelPermissions.plugin.js"}*//
+//META{"name":"ChannelPermissions","displayName":"ChannelPermissions","website":"https://github.com/Farcrada/DiscordPlugins/Channel-Permissions","source":"https://github.com/Farcrada/DiscordPlugins/Channel-Permissions/blob/master/ChannelPermissions.plugin.js"}*//
 
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "0.0.1"; }
+    getVersion() { return "0.3.5"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -22,39 +22,59 @@ class ChannelPermissions {
 
 
         //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS
-        BdApi.injectCSS("ToolTipStyle", `
+        BdApi.injectCSS("ToolTipStyle",`
+        
         .tooltip {
-            position: relative;
-            border-left: 1px dotted black;
+            display:block;
+            position:relative;
+            text-align:left;
         }
         
         .tooltip .tooltiptext {
-            visibility: hidden;
-            background-color: #555;
-            color: #fff;
-            border-radius: 6px;
-            padding: 5px;
-            position: absolute;
-            left: 50%;
-            margin-left: 60px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        
-        .tooltip .tooltiptext::after {
-            content: "";
-            position: absolute;
-            top: 10px;
-            left: -5px;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: transparent #555 transparent transparent;
+            min-width:220px; 
+            float:right;
+            top:-15%;
+            left:50%;
+            transform:translate(-50%, -100%);
+            padding:10px 20px;
+            color:#cccccc;
+            background-color:#4c4c4c;
+            font-weight:normal;
+            font-size:13px;
+            font-margin:2px;
+            border-radius:8px;
+            position:absolute;
+            z-index:99999999;
+            box-sizing:border-box;
+            box-shadow:0 1px 8px rgba(0,0,0,0.5);
+            visibility:hidden;
+            opacity:0;
+            transition:opacity 0.8s;
         }
         
         .tooltip:hover .tooltiptext {
-            visibility: visible;
-            opacity: 1;
+            visibility:visible; opacity:1;
+        }
+        
+        .tooltip .tooltiptext i {
+            position:absolute;
+            top:100%;
+            left:50%;
+            margin-left:-12px;
+            width:24px;
+            height:12px;
+            overflow:hidden;
+        }
+        
+        .tooltip .tooltiptext i::after {
+            content:'';
+            position:absolute;
+            width:12px;
+            height:12px;
+            left:50%;
+            transform:translate(-50%,-50%) rotate(45deg);
+            background-color:#EEEEEE;
+            box-shadow:0 1px 8px rgba(0,0,0,0.5);
         }
         `);
 
@@ -74,7 +94,7 @@ class ChannelPermissions {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/Channel-Permissions/master/ChannelPermissions.plugin.js");
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/Channel-Permissions/master/ChannelPermissions.plugin.js");
 
         //The BdApi.find().<something>-calls gives back a class name string. In this case: "sidebar-_____ da-sidebar"
         ChannelPermissions.channelListID = "." + BdApi.findModuleByProps("container", "base").sidebar.split(" ").filter(n => n.indexOf("da-") != 0);
@@ -118,9 +138,6 @@ class ChannelPermissions {
 
         //Time to start the logic.
         let text = showRoles(guild, channel);
-
-
-
 
 
         function showRoles(guild, channel) {
@@ -199,13 +216,20 @@ class ChannelPermissions {
 
             //Start with the channel topic;
             //Check if it has a topic and regex-replace any breakage with nothing.
+
+            /// Deleted
+            //${UserPopout.marginBottom4}
+            //
+            //
+            //          
+
             if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, "")) {
-                htmlString += `<div class="${UserPopout.marginBottom4}">Topic:</div><div class="${FlexChild.flex + Role.wrap}"><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px; max-width: ${window.outerWidth / 3}px">${encodeToHTML(channel.topic)}</div></div>`;
+                htmlString += `<div class="">Topic:</div><div class=""><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px; max-width: ${window.outerWidth / 3}px">${encodeToHTML(channel.topic)}</div></div>`;
             }
             //The allowed roles, and thus the overwritten roles (those the user already has)
             if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
                 //Title
-                htmlString += `<div class="${UserPopout.marginBottom4}">Allowed Roles:</div><div class="${FlexChild.flex + Role.wrap}">`;
+                htmlString += `<div class="">Allowed Roles:</div><div class="">`;
                 //Loop through the allowed roles
                 for (let role of allowedRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
@@ -222,7 +246,7 @@ class ChannelPermissions {
             //Check for allowed users
             if (allowedUsers.length > 0) {
                 //Title
-                htmlString += `<div class="${UserPopout.marginBottom4}">Allowed Users:</div><div class="${FlexChild.flex + Role.wrap}">`;
+                htmlString += `<div class="">Allowed Users:</div><div class="">`;
                 //Loop throught it
                 for (let user of allowedUsers) {
                     let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
@@ -234,7 +258,7 @@ class ChannelPermissions {
             //Check for denied roles
             if (deniedRoles.length > 0) {
                 //Title
-                htmlString += `<div class="${UserPopout.marginBottom4}">Denied Roles:</div><div class="${FlexChild.flex + Role.wrap}">`;
+                htmlString += `<div class="">Denied Roles:</div><div class="">`;
                 //Loop throught it
                 for (let role of deniedRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
@@ -246,7 +270,7 @@ class ChannelPermissions {
             //Check for denied users
             if (deniedUsers.length > 0) {
                 //Title
-                htmlString += `<div class="${UserPopout.marginBottom4}">Denied Users:</div><div class="${FlexChild.flex + Role.wrap}">`;
+                htmlString += `<div class="">Denied Users:</div><div class="">`;
                 //Loop through it.
                 for (let user of deniedUsers) {
                     let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
@@ -258,36 +282,35 @@ class ChannelPermissions {
             //If we have anything we need to create the tooltip.
             if (htmlString)
                 //This'll daisychain return the constructed <span>
-                return createTooltip(htmlString, e.currentTarget);
+                return createTooltip(htmlString);
             else
                 //And if it fucked up we got nothing.
                 return undefined;
         }
 
-        function createTooltip(text, target) {
+        function createTooltip(text) {
             //Create <span> object
             let toolTipElementSpan = document.createElement("span");
             //Add classname for CSS
-            toolTipElementSpan.className = " tooltiptext";
-            //Insert outr magnificent text
+            toolTipElementSpan.className = "tooltiptext";
+            //Insert our magnificent text
             toolTipElementSpan.innerHTML = text;
 
-            //Need to figure this out
-            //
-            //But for now add the classname and text
+            //Add our tooltuip properties to the container and append the span.
             containerdiv.className += " tooltip";
             containerdiv.appendChild(toolTipElementSpan);
-            
+
+
             //End it with a return of made object.
             return toolTipElementSpan;
         }
 
 
-        //////////////////////////////////////////////////////////
-        //////                                              //////
-        //////  Just functions you need, nothing special    //////
-        //////                                              //////
-        ////////////////////////////////////////////////////////// 
+        /////////////////////////////////////////////////////////
+        //////                                             //////
+        //////  Just functions you need, nothing special   //////
+        //////                                             //////
+        ///////////////////////////////////////////////////////// 
         function colorCONVERT(color, conv, type) {
             if (isObject(color)) {
                 var newcolor = {};
@@ -325,7 +348,7 @@ class ChannelPermissions {
                             switch (m % 6) {
                                 case 0: r = s, g = q, b = x; break;
                                 case 1: r = p, g = s, b = x; break;
-                                case 2: r = x, g = s, b = q; break;7
+                                case 2: r = x, g = s, b = q; break; 7
                                 case 3: r = x, g = p, b = s; break;
                                 case 4: r = q, g = x, b = s; break;
                                 case 5: r = s, g = x, b = p; break;
