@@ -1,9 +1,9 @@
-//META{"name":"DoubleClickToEditPTB","displayName":"DoubleClickToEditPTB","website":"https://github.com/Farcrada/Double-click-to-edit","source":"https://github.com/Farcrada/Double-click-to-edit/blob/master/DoubleClickToEditPTB.plugin.js"}*//
+//META{"name":"DoubleClickToEditPTB","displayName":"DoubleClickToEditPTB","website":"https://github.com/Farcrada/DiscordPlugins/Double-click-to-edit","source":"https://github.com/Farcrada/DiscordPlugins/Double-click-to-edit/blob/master/DoubleClickToEditPTB.plugin.js"}*//
 
 class DoubleClickToEditPTB {
     getName() { return "Double click to edit PTB"; }
     getDescription() { return "Double click messages to edit them. (PTB version)"; }
-    getVersion() { return "9.0.2"; }
+    getVersion() { return "9.0.3"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -35,7 +35,7 @@ class DoubleClickToEditPTB {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/Double-click-to-edit/master/DoubleClickToEditPTB.plugin.js");
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/Double-click-to-edit/master/DoubleClickToEditPTB.plugin.js");
     }
 
     stop() {
