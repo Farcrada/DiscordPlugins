@@ -1,11 +1,8 @@
-### NEW PTB (Public Test Build) VERSION UPLOADED!
-See the `PTB.plugin.js`-file
-
-# Double-click-to-edit
-Double click a Discord message to quickly edit it. Inspired and new/updated version of [Jiiks' original](https://github.com/Jiiks/BetterDiscordApp/blob/master/Plugins/dblClickEdit.plugin.js). 
+# Farcrada's Discord Plugin library
+Greetings. I made plugins. Sometimes with all the bullshit torn out or just because the old one doesn't work like it used to.
 
 # Requirements
-This plugin requires you to have (Bandaged) Better Discord installed: https://betterdiscord.net/home/ (Simple press the big ol' download button and then download the desired installer).
+These plugins require you to have (Bandaged) Better Discord installed: https://betterdiscord.net/home/ (Simply press the big ol' download button and then download the desired installer).
 
 # Installation
 Download the `.plugin.js` file and put it inside your plugins folder
