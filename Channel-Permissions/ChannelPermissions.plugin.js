@@ -21,7 +21,7 @@ class ChannelPermissions {
         if (ToolTipStyle) ToolTipStyle.parentElement.removeChild(ToolTipStyle);
 
 
-        //LITERALLY NO IDEA WHAT THE FUICK THIS MEANS
+        //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS
         BdApi.injectCSS("ToolTipStyle", `
         .tooltip {
             position: relative;
