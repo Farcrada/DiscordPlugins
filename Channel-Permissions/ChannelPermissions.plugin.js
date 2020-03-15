@@ -3,7 +3,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "0.3.5"; }
+    getVersion() { return "0.3.6"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -23,11 +23,15 @@ class ChannelPermissions {
 
         //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS
         BdApi.injectCSS("ToolTipStyle",`
-        
+        .tooltiptext {
+            pointer-events: none
+        }
+
         .tooltip {
             display:block;
             position:relative;
             text-align:left;
+            pointer-events:auto;
         }
         
         .tooltip .tooltiptext {
