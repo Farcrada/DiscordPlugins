@@ -24,61 +24,62 @@ class ChannelPermissions {
         //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS
         BdApi.injectCSS("ToolTipStyle",`
         .tooltiptext {
-            pointer-events: none
+            pointer-events: none;
         }
 
         .tooltip {
-            display:block;
-            position:relative;
-            text-align:left;
-            pointer-events:auto;
+            display: block;
+            position: relative;
+            text-align: left;
+            pointer-events: auto;
         }
         
         .tooltip .tooltiptext {
-            min-width:220px; 
-            float:right;
-            top:-15%;
-            left:50%;
-            transform:translate(-50%, -100%);
-            padding:10px 20px;
-            color:#cccccc;
-            background-color:#4c4c4c;
-            font-weight:normal;
-            font-size:13px;
-            font-margin:2px;
-            border-radius:8px;
-            position:absolute;
-            z-index:99999999;
-            box-sizing:border-box;
-            box-shadow:0 1px 8px rgba(0,0,0,0.5);
-            visibility:hidden;
-            opacity:0;
-            transition:opacity 0.8s;
+            min-width: 220px; 
+            float: right;
+            top: -15%;
+            left: 50%;
+            transform: translate(-50%, -100%);
+            padding: 10px 20px;
+            color: #cccccc;
+            background-color: #4c4c4c;
+            font-weight: normal;
+            font-size: 13px;
+            font-margin: 2px;
+            border-radius: 8px;
+            position: absolute;
+            z-index: 99999999;
+            box-sizing: border-box;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.5);
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.8s;
         }
         
         .tooltip:hover .tooltiptext {
-            visibility:visible; opacity:1;
+            visibility: visible;
+            opacity: 1;
         }
         
         .tooltip .tooltiptext i {
-            position:absolute;
-            top:100%;
-            left:50%;
-            margin-left:-12px;
-            width:24px;
-            height:12px;
-            overflow:hidden;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -12px;
+            width: 24px;
+            height: 12px;
+            overflow: hidden;
         }
         
         .tooltip .tooltiptext i::after {
-            content:'';
-            position:absolute;
-            width:12px;
-            height:12px;
-            left:50%;
-            transform:translate(-50%,-50%) rotate(45deg);
-            background-color:#EEEEEE;
-            box-shadow:0 1px 8px rgba(0,0,0,0.5);
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            left: 50%;
+            transform: translate(-50%,-50%) rotate(45deg);
+            background-color: #EEEEEE;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.5);
         }
         `);
 
