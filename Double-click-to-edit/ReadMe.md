@@ -1,4 +1,4 @@
-### NEW PTB (Public Test Build) VERSION UPLOADED!
+### NEW PTB (Public Test Build)-VERSION UPLOADED!
 See the `PTB.plugin.js`-file
 
 # Double-click-to-edit
