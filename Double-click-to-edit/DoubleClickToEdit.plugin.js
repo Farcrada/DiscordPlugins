@@ -1,4 +1,4 @@
-//META{"name":"DoubleClickToEdit","displayName":"DoubleClickToEdit","website":"https://github.com/Farcrada/DiscordPlugins/Double-click-to-edit","source":"https://github.com/Farcrada/DiscordPlugins/Double-click-to-edit/blob/master/DoubleClickToEdit.plugin.js"}*//
+//META{"name":"DoubleClickToEdit","displayName":"DoubleClickToEdit","website":"https://github.com/Farcrada/DiscordPlugins/Double-click-to-edit","source":"https://github.com/Farcrada/DiscordPlugins/blob/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"}*//
 
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
@@ -35,7 +35,7 @@ class DoubleClickToEdit {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/Double-click-to-edit/master/DoubleClickToEdit.plugin.js");
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
     }
 
     stop() {
