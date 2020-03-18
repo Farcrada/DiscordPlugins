@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "0.4.1"; }
+    getVersion() { return "0.4.2"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -57,6 +57,10 @@ class ChannelPermissions {
             visibility: hidden;
             z-index: 99999999;
         }
+        
+        .da-containerUserOver .tooltiptext {
+            display: none;
+        }
 
         .da-containerDefault .above {
             top: -15%;
@@ -68,7 +72,7 @@ class ChannelPermissions {
         }
         
         .da-containerDefault:hover .tooltiptext {
-            opacity: 1;
+            opacity: 0.75;
             visibility: visible;
         }
         `);
