@@ -1,9 +1,15 @@
-//META{"name":"ChannelPermissions","displayName":"ChannelPermissions","website":"https://github.com/Farcrada/DiscordPlugins/Channel-Permissions","source":"https://github.com/Farcrada/DiscordPlugins/blob/master/Channel-Permissions/ChannelPermissions.plugin.js"}*//
+/**
+ * @name ChannelPermissions
+ * 
+ * @website https://github.com/Farcrada/DiscordPlugins
+ * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Channel-Permissions/ChannelPermissions.plugin.js
+ */
+
 
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "0.3.6"; }
+    getVersion() { return "0.4.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -21,65 +27,49 @@ class ChannelPermissions {
         if (ToolTipStyle) ToolTipStyle.parentElement.removeChild(ToolTipStyle);
 
 
-        //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS
-        BdApi.injectCSS("ToolTipStyle",`
+        //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS, ok maybe a little.
+        BdApi.injectCSS("ToolTipStyle", `
         .tooltiptext {
             pointer-events: none;
+            top: 100px;
         }
 
-        .tooltip {
-            display: block;
-            position: relative;
-            text-align: left;
+        .da-containerDefault {
             pointer-events: auto;
+            position: relative;
         }
         
-        .tooltip .tooltiptext {
-            min-width: 220px; 
-            float: right;
-            top: -15%;
-            left: 50%;
-            transform: translate(-50%, -100%);
-            padding: 10px 20px;
-            color: #cccccc;
+        .da-containerDefault .tooltiptext {
             background-color: #4c4c4c;
-            font-weight: normal;
-            font-size: 13px;
-            font-margin: 2px;
             border-radius: 8px;
-            position: absolute;
-            z-index: 99999999;
             box-sizing: border-box;
             box-shadow: 0 1px 8px rgba(0,0,0,0.5);
-            visibility: hidden;
+            color: #cccccc;
+            font-margin: 2px;
+            font-size: 13px;
+            font-weight: normal;
+            left: 50%;
+            min-width: 220px;
             opacity: 0;
-            transition: opacity 0.8s;
+            padding: 10px 10px;
+            position: absolute;
+            transition: opacity .5s;
+            visibility: hidden;
+            z-index: 99999999;
+        }
+
+        .da-containerDefault .above {
+            top: -15%;
+            transform: translate(-50%, -100%);
+        }
+        .da-containerDefault .under {
+            top: 15%;
+            transform: translate(-50%, 32px);
         }
         
-        .tooltip:hover .tooltiptext {
-            visibility: visible;
+        .da-containerDefault:hover .tooltiptext {
             opacity: 1;
-        }
-        
-        .tooltip .tooltiptext i {
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -12px;
-            width: 24px;
-            height: 12px;
-            overflow: hidden;
-        }
-        
-        .tooltip .tooltiptext i::after {
-            content: '';
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            left: 50%;
-            transform: translate(-50%,-50%) rotate(45deg);
-            background-color: #EEEEEE;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.5);
+            visibility: visible;
         }
         `);
 
@@ -99,7 +89,7 @@ class ChannelPermissions {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/Channel-Permissions/master/ChannelPermissions.plugin.js");
 
         //The BdApi.find().<something>-calls gives back a class name string. In this case: "sidebar-_____ da-sidebar"
         ChannelPermissions.channelListID = "." + BdApi.findModuleByProps("container", "base").sidebar.split(" ").filter(n => n.indexOf("da-") != 0);
@@ -124,13 +114,64 @@ class ChannelPermissions {
         if (!containerdiv)
             return;
 
+
+
+        //Prevent "bubbling"
+        let toEl = e.target;
+        let fromEl = e.relatedTarget;
+
+        //If the mouseover didn't originate at our element we can ignore it
+        if (toEl != containerdiv.children[0])
+            return;
+
+        // if the element we rolled from is a child of our element we can ignore it
+        while (fromEl) {
+            fromEl = fromEl.parentNode;
+            if (fromEl == containerdiv)
+                return;
+        }
+
+
         //Check if we've already got a tooltip on it, no point in adding it again if so.
         //Normally it's only got one child, so checking if it has more indicates we've fucked with it.
         //
         //This needs to be reworked seen as the tooltip falls under the message div. 
         //
-        if (containerdiv.children.length > 1)
-            return;
+        if (containerdiv.children.length > 1) {
+            let toolSpan;
+            if (containerdiv.children[1].classList.contains("tooltiptext"))
+                toolSpan = containerdiv.children[1];
+            else
+                toolSpan = containerdiv.children[2];
+
+            if (toolSpan) {
+                let toolRect = toolSpan.getBoundingClientRect();
+                let parentRect = containerdiv.parentElement.getBoundingClientRect();
+
+                let relativeY = parentRect.y - toolRect.y;
+
+                let offset = (toolSpan.offsetHeight / 100) * 30;
+                let predictedYLocation = relativeY + toolSpan.offsetHeight + offset;
+
+                if (relativeY < 0) {
+                    if (!toolSpan.classList.contains("above")) {
+                        //console.log("above");
+                        //Need a new check to see if the height difference is caused by it being "under" the update before or not.
+                        console.log({ y: relativeY, height: toolSpan.offsetHeight, predictedY: predictedYLocation, offset: offset });
+
+                        toolSpan.classList.add("above");
+                        toolSpan.classList.remove("under");
+                    }
+                }
+                else {
+                    console.log({ y: relativeY, height: toolSpan.offsetHeight, predictedY: predictedYLocation, offset: offset });
+                    toolSpan.classList.add("under");
+                    toolSpan.classList.remove("above");
+                }
+
+                return;
+            }
+        }
 
         //Check the internals and look for the ID to know what we're up against.
         let instance = containerdiv[Object.keys(containerdiv).find(key => key.startsWith("__reactInternal"))];
@@ -138,8 +179,7 @@ class ChannelPermissions {
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
         let channel = BdApi.findModuleByProps("getChannel", "getChannels").getChannel(channelID);
-        let guildID = channel.guild_id;
-        let guild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild(guildID);
+        let guild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild(channel.guild_id);
 
         //Time to start the logic.
         let text = showRoles(guild, channel);
@@ -211,7 +251,6 @@ class ChannelPermissions {
 
 
             //Scour the api some more for styles.
-            let UserPopout = BdApi.findModuleByProps("userPopout", "headerPlaying");
             let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
             let FlexChild = BdApi.findModuleByProps("flexChild", "flex");
             let TextSize = BdApi.findModuleByProps("size10", "size14", "size20");
@@ -296,15 +335,16 @@ class ChannelPermissions {
         function createTooltip(text) {
             //Create <span> object
             let toolTipElementSpan = document.createElement("span");
-            //Add classname for CSS
-            toolTipElementSpan.className = "tooltiptext";
+
+            //Add classname for CSS (we start with transition to have it register)
+            toolTipElementSpan.classList.add("tooltiptext")
+            toolTipElementSpan.classList.add("above")
+
             //Insert our magnificent text
             toolTipElementSpan.innerHTML = text;
 
-            //Add our tooltuip properties to the container and append the span.
-            containerdiv.className += " tooltip";
+            //Add our tooltip style to the container and append the span.
             containerdiv.appendChild(toolTipElementSpan);
-
 
             //End it with a return of made object.
             return toolTipElementSpan;
