@@ -93,7 +93,7 @@ class ChannelPermissions {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/Channel-Permissions/master/ChannelPermissions.plugin.js");
+        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
 
         //The BdApi.find().<something>-calls gives back a class name string. In this case: "sidebar-_____ da-sidebar"
         ChannelPermissions.channelListID = "." + BdApi.findModuleByProps("container", "base").sidebar.split(" ").filter(n => n.indexOf("da-") != 0);
