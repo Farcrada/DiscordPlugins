@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "0.4.2"; }
+    getVersion() { return "0.4.3"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -119,7 +119,6 @@ class ChannelPermissions {
             return;
 
 
-
         //Prevent "bubbling"
         let toEl = e.target;
         let fromEl = e.relatedTarget;
@@ -131,7 +130,7 @@ class ChannelPermissions {
         // if the element we rolled from is a child of our element we can ignore it
         while (fromEl) {
             fromEl = fromEl.parentNode;
-            if (fromEl == containerdiv)
+            if (fromEl == containerdiv.children[0])
                 return;
         }
 
@@ -152,14 +151,13 @@ class ChannelPermissions {
                 let toolRect = toolSpan.getBoundingClientRect();
                 let parentRect = containerdiv.parentElement.getBoundingClientRect();
 
-                let relativeY = parentRect.y - toolRect.y;
+                let relativeY = Math.abs(parentRect.y) - Math.abs(toolRect.y);
 
                 let offset = (toolSpan.offsetHeight / 100) * 30;
                 let predictedYLocation = relativeY + toolSpan.offsetHeight + offset;
 
                 if (relativeY < 0) {
                     if (!toolSpan.classList.contains("above")) {
-                        //console.log("above");
                         //Need a new check to see if the height difference is caused by it being "under" the update before or not.
                         console.log({ y: relativeY, height: toolSpan.offsetHeight, predictedY: predictedYLocation, offset: offset });
 
