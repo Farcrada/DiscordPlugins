@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "0.4.3"; }
+    getVersion() { return "1.0.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -39,7 +39,7 @@ class ChannelPermissions {
             position: relative;
         }
         
-        .da-containerDefault .tooltiptext {
+        .tooltiptext {
             background-color: #4c4c4c;
             border-radius: 8px;
             box-sizing: border-box;
@@ -147,32 +147,16 @@ class ChannelPermissions {
             else
                 toolSpan = containerdiv.children[2];
 
-            if (toolSpan) {
-                let toolRect = toolSpan.getBoundingClientRect();
-                let parentRect = containerdiv.parentElement.getBoundingClientRect();
-
-                let relativeY = Math.abs(parentRect.y) - Math.abs(toolRect.y);
-
-                let offset = (toolSpan.offsetHeight / 100) * 30;
-                let predictedYLocation = relativeY + toolSpan.offsetHeight + offset;
-
-                if (relativeY < 0) {
-                    if (!toolSpan.classList.contains("above")) {
-                        //Need a new check to see if the height difference is caused by it being "under" the update before or not.
-                        console.log({ y: relativeY, height: toolSpan.offsetHeight, predictedY: predictedYLocation, offset: offset });
-
-                        toolSpan.classList.add("above");
-                        toolSpan.classList.remove("under");
-                    }
-                }
-                else {
-                    console.log({ y: relativeY, height: toolSpan.offsetHeight, predictedY: predictedYLocation, offset: offset });
-                    toolSpan.classList.add("under");
-                    toolSpan.classList.remove("above");
-                }
-
-                return;
+            if(toolSpanGoesAbove(toolSpan)){
+                toolSpan.classList.add("above");
+                toolSpan.classList.remove("under");
             }
+            else{
+                toolSpan.classList.add("under");
+                toolSpan.classList.remove("above");
+            }
+
+            return;
         }
 
         //Check the internals and look for the ID to know what we're up against.
@@ -340,7 +324,6 @@ class ChannelPermissions {
 
             //Add classname for CSS (we start with transition to have it register)
             toolTipElementSpan.classList.add("tooltiptext")
-            toolTipElementSpan.classList.add("above")
 
             //Insert our magnificent text
             toolTipElementSpan.innerHTML = text;
@@ -348,8 +331,26 @@ class ChannelPermissions {
             //Add our tooltip style to the container and append the span.
             containerdiv.appendChild(toolTipElementSpan);
 
+            //Set position above or under the containerdiv (parent)
+            if(toolSpanGoesAbove(toolTipElementSpan))
+                toolTipElementSpan.classList.add("above");
+            else
+                toolTipElementSpan.classList.add("under");
+
             //End it with a return of made object.
             return toolTipElementSpan;
+        }
+
+        function toolSpanGoesAbove(toolSpan) {
+            let parentRect = containerdiv.getBoundingClientRect();
+            let offset = ((toolSpan.offsetHeight / 100) * 30) + containerdiv.offsetHeight;
+
+            if ((window.innerHeight - parentRect.y) < toolSpan.offsetHeight + offset) {
+                return true;
+            }
+            else {
+                return false;
+            }
         }
 
 
@@ -358,6 +359,7 @@ class ChannelPermissions {
         //////  Just functions you need, nothing special   //////
         //////                                             //////
         ///////////////////////////////////////////////////////// 
+
         function colorCONVERT(color, conv, type) {
             if (isObject(color)) {
                 var newcolor = {};
