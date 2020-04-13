@@ -9,7 +9,7 @@ const { shell } = require('electron');
 
 class SpotifyToSpotify {
     getName() { return "Spotify to Spotify"; }
-    getDescription() { return "Redirects Spotify links to Spotify instead of opening the webpage."; }
+    getDescription() { return "Redirects Spotify links to Spotify app instead of opening the webpage."; }
     getVersion() { return "1"; }
     getAuthor() { return "Farcrada"; }
 
