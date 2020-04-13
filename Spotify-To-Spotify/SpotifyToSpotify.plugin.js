@@ -19,10 +19,6 @@ class SpotifyToSpotify {
     stop() {
         document.removeEventListener("click", this.redirectToSpotify);
     }
-
-    unload() {
-        this.stop();
-    }
     
     redirectToSpotify(e) {
         if (e.target.localName == "a" && e.target.href.includes("open.spotify.com")) {
