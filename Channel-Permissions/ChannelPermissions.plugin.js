@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "1.0.0"; }
+    getVersion() { return "1.0.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -27,7 +27,6 @@ class ChannelPermissions {
         if (ToolTipStyle) ToolTipStyle.parentElement.removeChild(ToolTipStyle);
 
 
-        //LITERALLY NO IDEA WHAT THE FUCK THIS MEANS, ok maybe a little.
         BdApi.injectCSS("ToolTipStyle", `
         .tooltiptext {
             pointer-events: none;
@@ -72,7 +71,7 @@ class ChannelPermissions {
         }
         
         .da-containerDefault:hover .tooltiptext {
-            opacity: 0.75;
+            opacity: 0.85;
             visibility: visible;
         }
         `);
@@ -240,7 +239,6 @@ class ChannelPermissions {
             let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
             let FlexChild = BdApi.findModuleByProps("flexChild", "flex");
             let TextSize = BdApi.findModuleByProps("size10", "size14", "size20");
-            let TextStyle = BdApi.findModuleByProps("large", "primary", "selectable");
             //Set up variable for the HTML string we need to display in our tooltiptext.
             let htmlString = ``;
 
@@ -251,10 +249,10 @@ class ChannelPermissions {
             //${UserPopout.marginBottom4}
             //
             //
-            //          
+            //
 
             if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, "")) {
-                htmlString += `<div class="">Topic:</div><div class=""><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px; max-width: ${window.outerWidth / 3}px">${encodeToHTML(channel.topic)}</div></div>`;
+                htmlString += `<div class="">Topic:</div><div class=""><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px; max-width: ${window.outerWidth / 3}px">${encodeToHTML(channel.topic)}</div></div>`;
             }
             //The allowed roles, and thus the overwritten roles (those the user already has)
             if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
@@ -263,12 +261,12 @@ class ChannelPermissions {
                 //Loop through the allowed roles
                 for (let role of allowedRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-allowedrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(role.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-allowedrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(role.name)}</div></div>`;
                 }
                 //loop through the overwritten roles
                 for (let role of overwrittenRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-overwrittenrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}" style="text-decoration: line-through !important;">${encodeToHTML(role.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-overwrittenrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}" style="text-decoration: line-through !important;">${encodeToHTML(role.name)}</div></div>`;
                 }
                 //And it with a /div.
                 htmlString += `</div>`;
@@ -280,7 +278,7 @@ class ChannelPermissions {
                 //Loop throught it
                 for (let user of allowedUsers) {
                     let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-denieduser" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(user.nick ? user.nick : user.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-denieduser" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(user.nick ? user.nick : user.name)}</div></div>`;
                 }
                 //End it.
                 htmlString += `</div>`;
@@ -292,7 +290,7 @@ class ChannelPermissions {
                 //Loop throught it
                 for (let role of deniedRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-deniedrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(role.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-deniedrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(role.name)}</div></div>`;
                 }
                 //End it.
                 htmlString += `</div>`;
@@ -304,7 +302,7 @@ class ChannelPermissions {
                 //Loop through it.
                 for (let user of deniedUsers) {
                     let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12 + TextStyle.weightMedium} SHC-denieduser" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(user.nick ? user.nick : user.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-denieduser" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(user.nick ? user.nick : user.name)}</div></div>`;
                 }
                 //End it.
                 htmlString += `</div>`;
@@ -534,3 +532,5 @@ class ChannelPermissions {
         function isObject(obj) { return obj && Object.prototype.isPrototypeOf(obj) && !Array.prototype.isPrototypeOf(obj); }
     }
 }
+
+
