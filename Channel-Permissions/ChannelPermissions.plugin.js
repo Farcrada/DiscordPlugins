@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "1.0.1"; }
+    getVersion() { return "1.0.2"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
