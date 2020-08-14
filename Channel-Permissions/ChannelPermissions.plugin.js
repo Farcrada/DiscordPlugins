@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "1.0.2"; }
+    getVersion() { return "1.0.3"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -48,7 +48,7 @@ class ChannelPermissions {
             font-size: 13px;
             font-weight: normal;
             left: 50%;
-            min-width: 220px;
+            width: 220px;
             opacity: 0;
             padding: 10px 10px;
             position: absolute;
@@ -141,42 +141,54 @@ class ChannelPermissions {
         //
         if (containerdiv.children.length > 1) {
             let toolSpan;
-            if (containerdiv.children[1].classList.contains("tooltiptext"))
-                toolSpan = containerdiv.children[1];
-            else
-                toolSpan = containerdiv.children[2];
 
-            if(toolSpanGoesAbove(toolSpan)){
+            for (let child in containerdiv.children) {
+                if (child.classList)
+                    if (child.classList.contains("tooltiptext"))
+                        toolSpan = child;
+            }
+
+            if (!toolSpan)
+                return;
+
+            if (toolSpanGoesAbove(toolSpan)) {
                 toolSpan.classList.add("above");
                 toolSpan.classList.remove("under");
             }
-            else{
+            else {
                 toolSpan.classList.add("under");
                 toolSpan.classList.remove("above");
             }
-
             return;
         }
 
         //Check the internals and look for the ID to know what we're up against.
         let instance = containerdiv[Object.keys(containerdiv).find(key => key.startsWith("__reactInternal"))];
-        let channelID = instance && findValue(instance, "id");
+        let instanceChannel = instance && findValue(instance, "channel");
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
-        let channel = BdApi.findModuleByProps("getChannel", "getChannels").getChannel(channelID);
+        let ChannelStore = BdApi.findModuleByProps("getChannel", "getChannels");
+        let channel = ChannelStore.getChannel(instanceChannel.id);
         let guild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild(channel.guild_id);
 
         //Time to start the logic.
+        //This returns the actual <span> which is made.
+        //But we never use it, only call it.
         let text = showRoles(guild, channel);
 
 
         function showRoles(guild, channel) {
             //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
-            let Permissions = BdApi.findModuleByProps("Permissions", "ActivityTypes").Permissions;
+            let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
             let MemberStore = BdApi.findModuleByProps("getMember", "getMembers");
             let UserStore = BdApi.findModuleByProps("getUser", "getUsers");
+            let DiscordConstants = BdApi.findModuleByProps("Permissions", "ActivityTypes");
 
-            //Store yourself and preset all the display sections.
+            let overrideTypes = Object.keys(PermissionStore.PermissionOverrideType);
+
+            let category = ChannelStore.getChannel(ChannelStore.getChannel(channel.id).parent_id);
+
+            //Store yourself and create all the role sections.
             let myMember = MemberStore.getMember(guild.id, BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id);
             let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
             let everyoneDenied = false;
@@ -184,11 +196,11 @@ class ChannelPermissions {
             //Loop through all the permissions
             for (let id in channel.permissionOverwrites) {
                 //Check if the current permission type is a role
-                if (channel.permissionOverwrites[id].type == "role" &&
-                    //And if it's not just @everyopne role
-                    (guild.roles[id].name != "@everyone") &&
-                    //check if it's an allowing permission
-                    (channel.permissionOverwrites[id].allow | Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow) {
+                if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+                //And if it's not just @everyopne role
+                (guild.roles[id] && guild.roles[id].name != "@everyone") &&
+                //check if it's an allowing permission
+                ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
 
                     //Stripe through those the user has
                     if (myMember.roles.includes(id))
@@ -198,9 +210,9 @@ class ChannelPermissions {
                         allowedRoles.push(guild.roles[id]);
                 }
                 //Check if permission is for a single user instead of a role
-                else if (channel.permissionOverwrites[id].type == "member" &&
-                    //check if it's an allowing permission
-                    (channel.permissionOverwrites[id].allow | Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow) {
+                else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+                //check if it's an allowing permission
+                ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
 
                     //Specific allowed users get added to their own section
                     let user = UserStore.getUser(id);
@@ -209,8 +221,8 @@ class ChannelPermissions {
                         allowedUsers.push(Object.assign({ name: user.username }, member));
                 }
                 //Same as the allowed but now for denied roles
-                if (channel.permissionOverwrites[id].type == "role" &&
-                    (channel.permissionOverwrites[id].deny | Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny) {
+                if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+                ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
 
                     //Specific everyone denied
                     deniedRoles.push(guild.roles[id]);
@@ -219,8 +231,8 @@ class ChannelPermissions {
                         everyoneDenied = true;
                 }
                 //Same as the allowed but now for denied members
-                else if (channel.permissionOverwrites[id].type == "member" &&
-                    (channel.permissionOverwrites[id].deny | Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny) {
+                else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+                ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
 
                     //Specific denied users
                     let user = UserStore.getUser(id);
@@ -234,7 +246,6 @@ class ChannelPermissions {
             if (!everyoneDenied)
                 allowedRoles.push({ "name": "@everyone" });
 
-
             //Scour the api some more for styles.
             let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
             let FlexChild = BdApi.findModuleByProps("flexChild", "flex");
@@ -242,8 +253,6 @@ class ChannelPermissions {
             //Set up variable for the HTML string we need to display in our tooltiptext.
             let htmlString = ``;
 
-            //Start with the channel topic;
-            //Check if it has a topic and regex-replace any breakage with nothing.
 
             /// Deleted
             //${UserPopout.marginBottom4}
@@ -251,8 +260,10 @@ class ChannelPermissions {
             //
             //
 
+            //Start with the channel topic;
+            //Check if it has a topic and regex-replace any breakage with nothing.
             if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, "")) {
-                htmlString += `<div class="">Topic:</div><div class=""><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px; max-width: ${window.outerWidth / 3}px">${encodeToHTML(channel.topic)}</div></div>`;
+                htmlString += `<div class="">Topic:</div><div class=""><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px;">${encodeToHTML(channel.topic)}</div></div>`;
             }
             //The allowed roles, and thus the overwritten roles (those the user already has)
             if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
@@ -330,7 +341,7 @@ class ChannelPermissions {
             containerdiv.appendChild(toolTipElementSpan);
 
             //Set position above or under the containerdiv (parent)
-            if(toolSpanGoesAbove(toolTipElementSpan))
+            if (toolSpanGoesAbove(toolTipElementSpan))
                 toolTipElementSpan.classList.add("above");
             else
                 toolTipElementSpan.classList.add("under");
@@ -532,5 +543,3 @@ class ChannelPermissions {
         function isObject(obj) { return obj && Object.prototype.isPrototypeOf(obj) && !Array.prototype.isPrototypeOf(obj); }
     }
 }
-
-
