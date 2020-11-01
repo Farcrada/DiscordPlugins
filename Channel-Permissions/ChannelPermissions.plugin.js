@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "1.0.3"; }
+    getVersion() { return "1.0.4"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -112,11 +112,18 @@ class ChannelPermissions {
 
         //We start with the main channellist holder and target it.
         let containerdiv = e.target.closest('[class^=containerDefault]');
-
+        
         //Check for null; doesn't help just continueing if we ain't got something to actually do anything with.
         if (!containerdiv)
             return;
-
+        
+        //We need a way to check if a voice channel is filled and thus force it above
+        let voiceChannel = false;
+        if (containerdiv.children[0].classList.length < 1)
+        {
+            voiceChannel = true;
+            containerdiv = containerdiv.children[0];
+        }
 
         //Prevent "bubbling"
         let toEl = e.target;
@@ -127,11 +134,17 @@ class ChannelPermissions {
             return;
 
         // if the element we rolled from is a child of our element we can ignore it
+        let cancel = false;
         while (fromEl) {
             fromEl = fromEl.parentNode;
             if (fromEl == containerdiv.children[0])
+            {
+                cancel = true;
                 return;
+            }
         }
+        if (cancel)
+            return;
 
 
         //Check if we've already got a tooltip on it, no point in adding it again if so.
@@ -351,6 +364,9 @@ class ChannelPermissions {
         }
 
         function toolSpanGoesAbove(toolSpan) {
+            if(voiceChannel)
+                return true;
+
             let parentRect = containerdiv.getBoundingClientRect();
             let offset = ((toolSpan.offsetHeight / 100) * 30) + containerdiv.offsetHeight;
 
