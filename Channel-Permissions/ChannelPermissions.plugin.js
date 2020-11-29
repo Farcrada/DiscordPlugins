@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "1.0.4"; }
+    getVersion() { return "1.0.5"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -176,11 +176,11 @@ class ChannelPermissions {
         }
 
         //Check the internals and look for the ID to know what we're up against.
-        let instance = containerdiv[Object.keys(containerdiv).find(key => key.startsWith("__reactInternal"))];
+        let instance = containerdiv[Object.keys(containerdiv).find(key => key.startsWith("__reactFiber"))];
         let instanceChannel = instance && findValue(instance, "channel");
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
-        let ChannelStore = BdApi.findModuleByProps("getChannel", "getChannels");
+        let ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
         let channel = ChannelStore.getChannel(instanceChannel.id);
         let guild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild(channel.guild_id);
 
