@@ -3,7 +3,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.4"; }
+    getVersion() { return "9.0.5"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -48,7 +48,7 @@ class DoubleClickToEdit {
         if (!messagediv || !messagediv.classList.contains('da-zalgo'))
             return;
 
-        let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactFiber"))];
+        let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
         let message = instance && findValue(instance, "message");
         
         if (!message)
