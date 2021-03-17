@@ -9,7 +9,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.7"; }
+    getVersion() { return "9.0.8"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -58,14 +58,28 @@ class DoubleClickToEdit {
 
         let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
         let message = instance && getValueFromKey(instance, "message");
+        let baseMessage = instance && getValueFromKey(instance, "baseMessage");
 
-        if (messageExists(message, DoubleClickToEdit.myID)) {
-            let baseMessage = instance && getValueFromKey(instance, "baseMessage");
-            if (baseMessage && !messageExists(baseMessage, DoubleClickToEdit.myID))
+        let msgYours = messageYours(message, DoubleClickToEdit.myID);
+        let baseMsgYours = messageYours(baseMessage, DoubleClickToEdit.myID);
+
+        //console.log(messagediv, message, instance);
+
+        //Message(/quote) isn't yours
+        if(!msgYours){
+            message = baseMessage;
+            //Maybe the base message is yours
+            if (!baseMsgYours)
+                return
+        }
+        //Message(/quote) is yours
+        else if (msgYours) {
+            //Maybe it is a quote, so check the base message (if it exists)
+            if(baseMsgYours)
+                message = baseMessage;
+            else if(baseMsgYours == false)
                 return;
         }
-        else
-            return;
 
         //Execution
         BdApi.findModuleByProps("receiveMessage", "editMessage").startEditMessage(message.channel_id, message.id, message.content);
@@ -81,14 +95,21 @@ var blacklist = {
     contextSection: true
 };
 
-function messageExists(message, id) {
+function messageYours(message, id) {
     if (!message)
-        return false;
+        return undefined;
 
     if (message.author.id !== id)
         return false;
 
     return true;
+}
+
+function baseCheck(instance, id) {
+    let baseMessage = instance && getValueFromKey(instance, "baseMessage");
+    if (baseMessage && !messageExists(baseMessage, id))
+        return undefined;
+    return baseMessage;
 }
 
 function getValueFromKey(instance, searchkey) {
