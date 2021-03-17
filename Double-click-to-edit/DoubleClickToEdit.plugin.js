@@ -9,7 +9,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.6"; }
+    getVersion() { return "9.0.7"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -59,11 +59,13 @@ class DoubleClickToEdit {
         let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
         let message = instance && getValueFromKey(instance, "message");
 
-        if (!messageExists(message, DoubleClickToEdit.myID)) {
-            message = instance && getValueFromKey(instance, "baseMessage");
-            if (!messageExists(message, DoubleClickToEdit.myID))
+        if (messageExists(message, DoubleClickToEdit.myID)) {
+            let baseMessage = instance && getValueFromKey(instance, "baseMessage");
+            if (baseMessage && !messageExists(baseMessage, DoubleClickToEdit.myID))
                 return;
         }
+        else
+            return;
 
         //Execution
         BdApi.findModuleByProps("receiveMessage", "editMessage").startEditMessage(message.channel_id, message.id, message.content);
