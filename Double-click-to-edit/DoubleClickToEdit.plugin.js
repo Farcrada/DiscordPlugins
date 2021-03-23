@@ -9,21 +9,26 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.8"; }
+    getVersion() { return "9.0.9"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
-        let libraryScript = document.getElementById("ZLibraryScript");
-        if (!libraryScript || !window.ZLibrary) {
-            if (libraryScript) libraryScript.parentElement.removeChild(libraryScript);
-            libraryScript = document.createElement("script");
-            libraryScript.setAttribute("type", "text/javascript");
-            libraryScript.setAttribute("src", "https://rauenzi.github.io/BDPluginLibrary/release/ZLibrary.js");
-            libraryScript.setAttribute("id", "ZLibraryScript");
-            document.head.appendChild(libraryScript);
+        if (!global.ZeresPluginLibrary) {
+            BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
+                confirmText: "Download Now",
+                cancelText: "Cancel",
+                onConfirm: () => {
+                    require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
+                        async (error, response, body) => {
+                            if (error)
+                                return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
+                            await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
+                        });
+                }
+            });
         }
 
-        if (window.ZLibrary) this.initialize();
+        if (global.ZeresPluginLibrary) this.initialize();
 
         try {
             document.addEventListener('dblclick', this.handler);
@@ -41,7 +46,7 @@ class DoubleClickToEdit {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
+        ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
 
         DoubleClickToEdit.myID = BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id;
     }
@@ -63,10 +68,8 @@ class DoubleClickToEdit {
         let msgYours = messageYours(message, DoubleClickToEdit.myID);
         let baseMsgYours = messageYours(baseMessage, DoubleClickToEdit.myID);
 
-        //console.log(messagediv, message, instance);
-
         //Message(/quote) isn't yours
-        if(!msgYours){
+        if (!msgYours) {
             message = baseMessage;
             //Maybe the base message is yours
             if (!baseMsgYours)
@@ -75,9 +78,9 @@ class DoubleClickToEdit {
         //Message(/quote) is yours
         else if (msgYours) {
             //Maybe it is a quote, so check the base message (if it exists)
-            if(baseMsgYours)
+            if (baseMsgYours)
                 message = baseMessage;
-            else if(baseMsgYours == false)
+            else if (baseMsgYours == false)
                 return;
         }
 
@@ -103,13 +106,6 @@ function messageYours(message, id) {
         return false;
 
     return true;
-}
-
-function baseCheck(instance, id) {
-    let baseMessage = instance && getValueFromKey(instance, "baseMessage");
-    if (baseMessage && !messageExists(baseMessage, id))
-        return undefined;
-    return baseMessage;
 }
 
 function getValueFromKey(instance, searchkey) {
