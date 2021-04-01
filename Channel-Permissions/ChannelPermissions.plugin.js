@@ -9,18 +9,23 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "1.0.6"; }
+    getVersion() { return "1.1.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
-        let libraryScript = document.getElementById("ZLibraryScript");
-        if (!libraryScript || !window.ZLibrary) {
-            if (libraryScript) libraryScript.parentElement.removeChild(libraryScript);
-            libraryScript = document.createElement("script");
-            libraryScript.setAttribute("type", "text/javascript");
-            libraryScript.setAttribute("src", "https://rauenzi.github.io/BDPluginLibrary/release/ZLibrary.js");
-            libraryScript.setAttribute("id", "ZLibraryScript");
-            document.head.appendChild(libraryScript);
+        if (!global.ZeresPluginLibrary) {
+            BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
+                confirmText: "Download Now",
+                cancelText: "Cancel",
+                onConfirm: () => {
+                    require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
+                        async (error, response, body) => {
+                            if (error)
+                                return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
+                            await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
+                        });
+                }
+            });
         }
 
         let ToolTipStyle = document.getElementById("ToolTipStyle");
@@ -33,7 +38,7 @@ class ChannelPermissions {
             top: 100px;
         }
 
-        .da-containerDefault {
+        [class|='containerDefault'] {
             pointer-events: auto;
             position: relative;
         }
@@ -57,27 +62,27 @@ class ChannelPermissions {
             z-index: 99999999;
         }
         
-        .da-containerUserOver .tooltiptext {
+        [class|='containerUserOver'] .tooltiptext {
             display: none;
         }
 
-        .da-containerDefault .above {
+        [class|='containerDefault'] .above {
             top: -15%;
             transform: translate(-50%, -100%);
         }
-        .da-containerDefault .under {
+        [class|='containerDefault'] .under {
             top: 15%;
             transform: translate(-50%, 32px);
         }
         
-        .da-containerDefault:hover .tooltiptext {
+        [class|='containerDefault']:hover .tooltiptext {
             opacity: 0.85;
             visibility: visible;
         }
         `);
 
         try {
-            if (window.ZLibrary) this.initialize();
+            if (global.ZeresPluginLibrary) this.initialize();
         }
         catch (err) {
             console.error(this.getName(), "fatal error, plugin could not be started!", err);
@@ -92,7 +97,7 @@ class ChannelPermissions {
     }
 
     initialize() {
-        ZLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
+        global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
 
         //The BdApi.find().<something>-calls gives back a class name string. In this case: "sidebar-_____ da-sidebar"
         ChannelPermissions.channelListID = "." + BdApi.findModuleByProps("container", "base").sidebar.split(" ").filter(n => n.indexOf("da-") != 0);
@@ -111,12 +116,12 @@ class ChannelPermissions {
         //We need to find something that could lead to a channelID or where you'd otherwise figure you'd want to see the permissions for channels
 
         //We start with the main channellist holder and target it.
-        let containerdiv = e.target.closest('[class^=containerDefault]');
+        let containerdiv = e.target.closest('[class|=containerDefault]');
         
         //Check for null; doesn't help just continueing if we ain't got something to actually do anything with.
         if (!containerdiv)
             return;
-        
+
         //We need a way to check if a voice channel is filled and thus force it above
         let voiceChannel = false;
         if (containerdiv.children[0].classList.length < 1)
@@ -145,7 +150,6 @@ class ChannelPermissions {
         }
         if (cancel)
             return;
-
 
         //Check if we've already got a tooltip on it, no point in adding it again if so.
         //Normally it's only got one child, so checking if it has more indicates we've fucked with it.
@@ -377,185 +381,185 @@ class ChannelPermissions {
                 return false;
             }
         }
-
-
-        /////////////////////////////////////////////////////////
-        //////                                             //////
-        //////  Just functions you need, nothing special   //////
-        //////                                             //////
-        ///////////////////////////////////////////////////////// 
-
-        function colorCONVERT(color, conv, type) {
-            if (isObject(color)) {
-                var newcolor = {};
-                for (let pos in color) newcolor[pos] = colorCONVERT(color[pos], conv, type);
-                return newcolor;
-            }
-            else {
-                type = type === undefined || !type || !["RGB", "RGBA", "RGBCOMP", "HSL", "HSLA", "HSLCOMP", "HEX", "HEXA", "INT"].includes(type.toUpperCase()) ? getColorType(color) : type.toUpperCase();
-                if (conv == "RGBCOMP") {
-                    switch (type) {
-                        case "RGBCOMP":
-                            if (color.length == 3) return processRGB(color);
-                            else if (color.length == 4) {
-                                let a = processA(color.pop());
-                                return processRGB(color).concat(a);
-                            }
-                            break;
-                        case "RGB":
-                            return processRGB(color.replace(/\s/g, "").slice(4, -1).split(","));
-                        case "RGBA":
-                            let comp = color.replace(/\s/g, "").slice(5, -1).split(",");
-                            let a = processA(comp.pop());
-                            return processRGB(comp).concat(a);
-                        case "HSLCOMP":
-                            if (color.length == 3) return colorCONVERT(`hsl(${processHSL(color).join(",")})`, "RGBCOMP");
-                            else if (color.length == 4) {
-                                let a = processA(color.pop());
-                                return colorCONVERT(`hsl(${processHSL(color).join(",")})`, "RGBCOMP").concat(a);
-                            }
-                            break;
-                        case "HSL":
-                            var hslcomp = processHSL(color.replace(/\s/g, "").slice(4, -1).split(","));
-                            var r, g, b, m, c, x, p, q;
-                            var h = hslcomp[0] / 360, l = parseInt(hslcomp[1]) / 100, s = parseInt(hslcomp[2]) / 100; m = Math.floor(h * 6); c = h * 6 - m; x = s * (1 - l); p = s * (1 - c * l); q = s * (1 - (1 - c) * l);
-                            switch (m % 6) {
-                                case 0: r = s, g = q, b = x; break;
-                                case 1: r = p, g = s, b = x; break;
-                                case 2: r = x, g = s, b = q; break; 7
-                                case 3: r = x, g = p, b = s; break;
-                                case 4: r = q, g = x, b = s; break;
-                                case 5: r = s, g = x, b = p; break;
-                            }
-                            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-                        case "HSLA":
-                            var hslcomp = color.replace(/\s/g, "").slice(5, -1).split(",");
-                            return colorCONVERT(`hsl(${hslcomp.slice(0, 3).join(",")})`, "RGBCOMP").concat(processA(hslcomp.pop()));
-                        case "HEX":
-                            var hex = /^#([a-f\d]{1})([a-f\d]{1})([a-f\d]{1})$|^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
-                            return [parseInt(hex[1] + hex[1] || hex[4], 16).toString(), parseInt(hex[2] + hex[2] || hex[5], 16).toString(), parseInt(hex[3] + hex[3] || hex[6], 16).toString()];
-                        case "HEXA":
-                            var hex = /^#([a-f\d]{1})([a-f\d]{1})([a-f\d]{1})([a-f\d]{1})$|^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
-                            return [parseInt(hex[1] + hex[1] || hex[5], 16).toString(), parseInt(hex[2] + hex[2] || hex[6], 16).toString(), parseInt(hex[3] + hex[3] || hex[7], 16).toString(), Math.floor(mapRange([0, 255], [0, 100], parseInt(hex[4] + hex[4] || hex[8], 16).toString())) / 100];
-                        case "INT":
-                            color = processINT(color);
-                            return [(color >> 16 & 255).toString(), (color >> 8 & 255).toString(), (color & 255).toString()];
-                        default:
-                            return null;
-                    }
-                }
-                else {
-                    var rgbcomp = type == "RGBCOMP" ? color : colorCONVERT(color, "RGBCOMP", type);
-                    if (rgbcomp) switch (conv) {
-                        case "RGB":
-                            return `rgb(${processRGB(rgbcomp.slice(0, 3)).join(",")})`;
-                        case "RGBA":
-                            rgbcomp = rgbcomp.slice(0, 4);
-                            var a = rgbcomp.length == 4 ? processA(rgbcomp.pop()) : 1;
-                            return `rgba(${processRGB(rgbcomp).concat(a).join(",")})`;
-                        case "HSLCOMP":
-                            var a = rgbcomp.length == 4 ? processA(rgbcomp.pop()) : null;
-                            var hslcomp = processHSL(colorCONVERT(rgbcomp, "HSL").replace(/\s/g, "").split(","));
-                            return a != null ? hslcomp.concat(a) : hslcomp;
-                        case "HSL":
-                            var r = processC(rgbcomp[0]), g = processC(rgbcomp[1]), b = processC(rgbcomp[2]);
-                            var max = Math.max(r, g, b), min = Math.min(r, g, b), dif = max - min, h, l = max === 0 ? 0 : dif / max, s = max / 255;
-                            switch (max) {
-                                case min: h = 0; break;
-                                case r: h = g - b + dif * (g < b ? 6 : 0); h /= 6 * dif; break;
-                                case g: h = b - r + dif * 2; h /= 6 * dif; break;
-                                case b: h = r - g + dif * 4; h /= 6 * dif; break;
-                            }
-                            return `hsl(${processHSL([Math.round(h * 360), l * 100, s * 100]).join(",")})`;
-                        case "HSLA":
-                            var j0 = rgbcomp.length == 4 ? processA(rgbcomp.pop()) : 1;
-                            return `hsla(${colorCONVERT(rgbcomp, "HSL").slice(4, -1).split(",").concat(j0).join(",")})`;
-                        case "HEX":
-                            return ("#" + (0x1000000 + (rgbcomp[2] | rgbcomp[1] << 8 | rgbcomp[0] << 16)).toString(16).slice(1)).toUpperCase();
-                        case "HEXA":
-                            return ("#" + (0x1000000 + (rgbcomp[2] | rgbcomp[1] << 8 | rgbcomp[0] << 16)).toString(16).slice(1) + (0x100 + Math.round(mapRange([0, 100], [0, 255], processA(rgbcomp[3]) * 100))).toString(16).slice(1)).toUpperCase();
-                        case "INT":
-                            return processINT(rgbcomp[2] | rgbcomp[1] << 8 | rgbcomp[0] << 16);
-                        default:
-                            return null;
-                    }
-                }
-            }
-        }
-
-        function findValue(instance, searchkey) {
-            var whitelist = {
-                memoizedProps: true,
-                child: true,
-                channel: true
-            };
-            var blacklist = {
-                contextSection: true
-            };
-
-            return getKey(instance);
-
-            function getKey(instance) {
-                var result = undefined;
-                if (instance && !Node.prototype.isPrototypeOf(instance)) {
-                    let keys = Object.getOwnPropertyNames(instance);
-                    for (let i = 0; result === undefined && i < keys.length; i++) {
-                        let key = keys[i];
-
-                        if (key && !blacklist[key]) {
-                            var value = instance[key];
-
-                            if (searchkey === key)
-                                result = value;
-
-                            else if ((typeof value === "object" || typeof value === "function") &&
-                                (whitelist[key] || key[0] == "." || !isNaN(key[0])))
-                                result = getKey(value);
-                        }
-                    }
-                }
-                return result;
-            }
-        }
-
-        function getColorType(color) {
-            if (color != null) {
-                if (typeof color === "object" && (color.length == 3 || color.length == 4)) {
-                    if (isRGB(color)) return "RGBCOMP";
-                    else if (isHSL(color)) return "HSLCOMP";
-                }
-                else if (typeof color === "string") {
-                    if (/^#[a-f\d]{3}$|^#[a-f\d]{6}$/i.test(color)) return "HEX";
-                    else if (/^#[a-f\d]{4}$|^#[a-f\d]{8}$/i.test(color)) return "HEXA";
-                    else {
-                        color = color.toUpperCase();
-                        var comp = color.replace(/[^0-9\.\-\,\%]/g, "").split(",");
-                        if (color.indexOf("RGB(") == 0 && comp.length == 3 && isRGB(comp)) return "RGB";
-                        else if (color.indexOf("RGBA(") == 0 && comp.length == 4 && isRGB(comp)) return "RGBA";
-                        else if (color.indexOf("HSL(") == 0 && comp.length == 3 && isHSL(comp)) return "HSL";
-                        else if (color.indexOf("HSLA(") == 0 && comp.length == 4 && isHSL(comp)) return "HSLA";
-                    }
-                }
-                else if (typeof color === "number" && parseInt(color) == color && color > -1 && color < 16777216) return "INT";
-            }
-            return null;
-            function isRGB(comp) { return comp.slice(0, 3).every(rgb => rgb.toString().indexOf("%") == -1 && parseFloat(rgb) == parseInt(rgb)); };
-            function isHSL(comp) { return comp.slice(1, 3).every(hsl => hsl.toString().indexOf("%") == hsl.length - 1); };
-        }
-
-        function mapRange(from, to, value) {
-            if (parseFloat(value) < parseFloat(from[0])) return parseFloat(to[0]);
-            else if (parseFloat(value) > parseFloat(from[1])) return parseFloat(to[1]);
-            else return parseFloat(to[0]) + (parseFloat(value) - parseFloat(from[0])) * (parseFloat(to[1]) - parseFloat(to[0])) / (parseFloat(from[1]) - parseFloat(from[0]));
-        }
-
-        function encodeToHTML(string) {
-            var ele = document.createElement("div");
-            ele.innerText = string;
-            return ele.innerHTML;
-        }
-
-        function processRGB(comp) { return comp.map(c => { return processC(c); }); };
-        function isObject(obj) { return obj && Object.prototype.isPrototypeOf(obj) && !Array.prototype.isPrototypeOf(obj); }
     }
 }
+
+
+/////////////////////////////////////////////////////////
+//////                                             //////
+//////  Just functions you need, nothing special   //////
+//////                                             //////
+///////////////////////////////////////////////////////// 
+
+function colorCONVERT(color, conv, type) {
+    if (isObject(color)) {
+        var newcolor = {};
+        for (let pos in color) newcolor[pos] = colorCONVERT(color[pos], conv, type);
+        return newcolor;
+    }
+    else {
+        type = type === undefined || !type || !["RGB", "RGBA", "RGBCOMP", "HSL", "HSLA", "HSLCOMP", "HEX", "HEXA", "INT"].includes(type.toUpperCase()) ? getColorType(color) : type.toUpperCase();
+        if (conv == "RGBCOMP") {
+            switch (type) {
+                case "RGBCOMP":
+                    if (color.length == 3) return processRGB(color);
+                    else if (color.length == 4) {
+                        let a = processA(color.pop());
+                        return processRGB(color).concat(a);
+                    }
+                    break;
+                case "RGB":
+                    return processRGB(color.replace(/\s/g, "").slice(4, -1).split(","));
+                case "RGBA":
+                    let comp = color.replace(/\s/g, "").slice(5, -1).split(",");
+                    let a = processA(comp.pop());
+                    return processRGB(comp).concat(a);
+                case "HSLCOMP":
+                    if (color.length == 3) return colorCONVERT(`hsl(${processHSL(color).join(",")})`, "RGBCOMP");
+                    else if (color.length == 4) {
+                        let a = processA(color.pop());
+                        return colorCONVERT(`hsl(${processHSL(color).join(",")})`, "RGBCOMP").concat(a);
+                    }
+                    break;
+                case "HSL":
+                    var hslcomp = processHSL(color.replace(/\s/g, "").slice(4, -1).split(","));
+                    var r, g, b, m, c, x, p, q;
+                    var h = hslcomp[0] / 360, l = parseInt(hslcomp[1]) / 100, s = parseInt(hslcomp[2]) / 100; m = Math.floor(h * 6); c = h * 6 - m; x = s * (1 - l); p = s * (1 - c * l); q = s * (1 - (1 - c) * l);
+                    switch (m % 6) {
+                        case 0: r = s, g = q, b = x; break;
+                        case 1: r = p, g = s, b = x; break;
+                        case 2: r = x, g = s, b = q; break; 7
+                        case 3: r = x, g = p, b = s; break;
+                        case 4: r = q, g = x, b = s; break;
+                        case 5: r = s, g = x, b = p; break;
+                    }
+                    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+                case "HSLA":
+                    var hslcomp = color.replace(/\s/g, "").slice(5, -1).split(",");
+                    return colorCONVERT(`hsl(${hslcomp.slice(0, 3).join(",")})`, "RGBCOMP").concat(processA(hslcomp.pop()));
+                case "HEX":
+                    var hex = /^#([a-f\d]{1})([a-f\d]{1})([a-f\d]{1})$|^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+                    return [parseInt(hex[1] + hex[1] || hex[4], 16).toString(), parseInt(hex[2] + hex[2] || hex[5], 16).toString(), parseInt(hex[3] + hex[3] || hex[6], 16).toString()];
+                case "HEXA":
+                    var hex = /^#([a-f\d]{1})([a-f\d]{1})([a-f\d]{1})([a-f\d]{1})$|^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+                    return [parseInt(hex[1] + hex[1] || hex[5], 16).toString(), parseInt(hex[2] + hex[2] || hex[6], 16).toString(), parseInt(hex[3] + hex[3] || hex[7], 16).toString(), Math.floor(mapRange([0, 255], [0, 100], parseInt(hex[4] + hex[4] || hex[8], 16).toString())) / 100];
+                case "INT":
+                    color = processINT(color);
+                    return [(color >> 16 & 255).toString(), (color >> 8 & 255).toString(), (color & 255).toString()];
+                default:
+                    return null;
+            }
+        }
+        else {
+            var rgbcomp = type == "RGBCOMP" ? color : colorCONVERT(color, "RGBCOMP", type);
+            if (rgbcomp) switch (conv) {
+                case "RGB":
+                    return `rgb(${processRGB(rgbcomp.slice(0, 3)).join(",")})`;
+                case "RGBA":
+                    rgbcomp = rgbcomp.slice(0, 4);
+                    var a = rgbcomp.length == 4 ? processA(rgbcomp.pop()) : 1;
+                    return `rgba(${processRGB(rgbcomp).concat(a).join(",")})`;
+                case "HSLCOMP":
+                    var a = rgbcomp.length == 4 ? processA(rgbcomp.pop()) : null;
+                    var hslcomp = processHSL(colorCONVERT(rgbcomp, "HSL").replace(/\s/g, "").split(","));
+                    return a != null ? hslcomp.concat(a) : hslcomp;
+                case "HSL":
+                    var r = processC(rgbcomp[0]), g = processC(rgbcomp[1]), b = processC(rgbcomp[2]);
+                    var max = Math.max(r, g, b), min = Math.min(r, g, b), dif = max - min, h, l = max === 0 ? 0 : dif / max, s = max / 255;
+                    switch (max) {
+                        case min: h = 0; break;
+                        case r: h = g - b + dif * (g < b ? 6 : 0); h /= 6 * dif; break;
+                        case g: h = b - r + dif * 2; h /= 6 * dif; break;
+                        case b: h = r - g + dif * 4; h /= 6 * dif; break;
+                    }
+                    return `hsl(${processHSL([Math.round(h * 360), l * 100, s * 100]).join(",")})`;
+                case "HSLA":
+                    var j0 = rgbcomp.length == 4 ? processA(rgbcomp.pop()) : 1;
+                    return `hsla(${colorCONVERT(rgbcomp, "HSL").slice(4, -1).split(",").concat(j0).join(",")})`;
+                case "HEX":
+                    return ("#" + (0x1000000 + (rgbcomp[2] | rgbcomp[1] << 8 | rgbcomp[0] << 16)).toString(16).slice(1)).toUpperCase();
+                case "HEXA":
+                    return ("#" + (0x1000000 + (rgbcomp[2] | rgbcomp[1] << 8 | rgbcomp[0] << 16)).toString(16).slice(1) + (0x100 + Math.round(mapRange([0, 100], [0, 255], processA(rgbcomp[3]) * 100))).toString(16).slice(1)).toUpperCase();
+                case "INT":
+                    return processINT(rgbcomp[2] | rgbcomp[1] << 8 | rgbcomp[0] << 16);
+                default:
+                    return null;
+            }
+        }
+    }
+}
+
+function findValue(instance, searchkey) {
+    var whitelist = {
+        memoizedProps: true,
+        child: true,
+        channel: true
+    };
+    var blacklist = {
+        contextSection: true
+    };
+
+    return getKey(instance);
+
+    function getKey(instance) {
+        var result = undefined;
+        if (instance && !Node.prototype.isPrototypeOf(instance)) {
+            let keys = Object.getOwnPropertyNames(instance);
+            for (let i = 0; result === undefined && i < keys.length; i++) {
+                let key = keys[i];
+
+                if (key && !blacklist[key]) {
+                    var value = instance[key];
+
+                    if (searchkey === key)
+                        result = value;
+
+                    else if ((typeof value === "object" || typeof value === "function") &&
+                        (whitelist[key] || key[0] == "." || !isNaN(key[0])))
+                        result = getKey(value);
+                }
+            }
+        }
+        return result;
+    }
+}
+
+function getColorType(color) {
+    if (color != null) {
+        if (typeof color === "object" && (color.length == 3 || color.length == 4)) {
+            if (isRGB(color)) return "RGBCOMP";
+            else if (isHSL(color)) return "HSLCOMP";
+        }
+        else if (typeof color === "string") {
+            if (/^#[a-f\d]{3}$|^#[a-f\d]{6}$/i.test(color)) return "HEX";
+            else if (/^#[a-f\d]{4}$|^#[a-f\d]{8}$/i.test(color)) return "HEXA";
+            else {
+                color = color.toUpperCase();
+                var comp = color.replace(/[^0-9\.\-\,\%]/g, "").split(",");
+                if (color.indexOf("RGB(") == 0 && comp.length == 3 && isRGB(comp)) return "RGB";
+                else if (color.indexOf("RGBA(") == 0 && comp.length == 4 && isRGB(comp)) return "RGBA";
+                else if (color.indexOf("HSL(") == 0 && comp.length == 3 && isHSL(comp)) return "HSL";
+                else if (color.indexOf("HSLA(") == 0 && comp.length == 4 && isHSL(comp)) return "HSLA";
+            }
+        }
+        else if (typeof color === "number" && parseInt(color) == color && color > -1 && color < 16777216) return "INT";
+    }
+    return null;
+    function isRGB(comp) { return comp.slice(0, 3).every(rgb => rgb.toString().indexOf("%") == -1 && parseFloat(rgb) == parseInt(rgb)); };
+    function isHSL(comp) { return comp.slice(1, 3).every(hsl => hsl.toString().indexOf("%") == hsl.length - 1); };
+}
+
+function mapRange(from, to, value) {
+    if (parseFloat(value) < parseFloat(from[0])) return parseFloat(to[0]);
+    else if (parseFloat(value) > parseFloat(from[1])) return parseFloat(to[1]);
+    else return parseFloat(to[0]) + (parseFloat(value) - parseFloat(from[0])) * (parseFloat(to[1]) - parseFloat(to[0])) / (parseFloat(from[1]) - parseFloat(from[0]));
+}
+
+function encodeToHTML(string) {
+    var ele = document.createElement("div");
+    ele.innerText = string;
+    return ele.innerHTML;
+}
+
+function processRGB(comp) { return comp.map(c => { return processC(c); }); };
+function isObject(obj) { return obj && Object.prototype.isPrototypeOf(obj) && !Array.prototype.isPrototypeOf(obj); }
