@@ -9,7 +9,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.0.9"; }
+    getVersion() { return "9.1.0"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -58,7 +58,7 @@ class DoubleClickToEdit {
     handler(e) {
         let messagediv = e.target.closest('[class^=message]');
 
-        if (!messagediv || !messagediv.classList.contains('da-zalgo'))
+        if (!messagediv)
             return;
 
         let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
