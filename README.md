@@ -8,7 +8,7 @@ These plugins require you to have (Bandaged) Better Discord installed: https://b
 Download the `.plugin.js` file and put it inside your plugins folder
 
 ## Plugins folder
-- Press the cogwheel (bottom right) next to the microphone and headphone-icon;
+- Press the cogwheel (bottom left) next to the microphone and headphone-icon;
 - Go to `Plugins` at the bottom right;
 - Click `Open Plugin Folder` at the top (file explorer can appear behind Discord itself, so check your taskbar);
 - Put the `.plugin.js` file there.
