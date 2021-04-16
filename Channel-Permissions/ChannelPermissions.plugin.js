@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "2.0.0"; }
+    getVersion() { return "2.0.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -109,7 +109,7 @@ class ChannelPermissions {
             //Since we just created or stored all the channels, we need to position our toolSpan.
             //So we add an event which also does not want to bubble
             container.addEventListener('mouseover', this.adjustPosition, true));
-        containers.forEach(this.activateToolTip)
+        containers.forEach(this.createToolTip)
     }
 
     adjustPosition(e) {
@@ -122,11 +122,7 @@ class ChannelPermissions {
             voiceChannel = true;
 
         //Find our Tool tip.
-        let toolSpan;
-        for (let i = 0; i < container.children.length; i++)
-            if (container.children[i].classList)
-                if (container.children[i].classList.contains("tooltiptext"))
-                    toolSpan = container.children[i];
+        let toolSpan = findTooltip(container);
 
         //If for whatever reason it can't find it: exit.
         if (!toolSpan)
@@ -142,7 +138,11 @@ class ChannelPermissions {
         }
     }
 
-    activateToolTip(container) {
+    createToolTip(container) {
+        //Find our Tool tip. If found, exit.
+        if (findTooltip(container))
+            return;
+
         //Check the internals and look for the Channel property which contains the channel's ID.
         let instance = container[Object.keys(container).find(key => key.startsWith("__reactInternal"))];
         let instanceChannel = instance && findValue(instance, "channel");
@@ -323,6 +323,15 @@ class ChannelPermissions {
     }
 }
 
+function findTooltip(container){
+    for (let i = 0; i < container.children.length; i++)
+        //Check if there are classes
+        if (container.children[i].classList)
+            //Check if it is indeed our tooltip
+            if (container.children[i].classList.contains("tooltiptext"))
+                return container.children[i];
+    return null;
+}
 
 function createTooltip(text, container) {
     //Create <span> object
