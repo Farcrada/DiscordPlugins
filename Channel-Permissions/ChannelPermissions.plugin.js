@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "2.0.1"; }
+    getVersion() { return "3.0.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -28,59 +28,6 @@ class ChannelPermissions {
             });
         }
 
-        let ToolTipStyle = document.getElementById("ToolTipStyle");
-        if (ToolTipStyle) ToolTipStyle.parentElement.removeChild(ToolTipStyle);
-
-
-        BdApi.injectCSS("ToolTipStyle", `
-        .tooltiptext {
-            pointer-events: none;
-            top: 100px;
-        }
-
-        [class|='containerDefault'] {
-            pointer-events: auto;
-            position: relative;
-        }
-        
-        .tooltiptext {
-            background-color: #4c4c4c;
-            border-radius: 8px;
-            box-sizing: border-box;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.5);
-            color: #cccccc;
-            font-margin: 2px;
-            font-size: 13px;
-            font-weight: normal;
-            left: 50%;
-            width: 220px;
-            opacity: 0;
-            padding: 10px 10px;
-            position: absolute;
-            transition: opacity .5s;
-            visibility: hidden;
-            z-index: 99999999;
-        }
-        
-        [class|='containerUserOver'] .tooltiptext {
-            display: none;
-        }
-
-        [class|='containerDefault'] .above {
-            top: -15%;
-            transform: translate(-50%, -100%);
-        }
-        [class|='containerDefault'] .under {
-            top: 15%;
-            transform: translate(-50%, 32px);
-        }
-        
-        [class|='containerDefault']:hover .tooltiptext {
-            opacity: 0.85;
-            visibility: visible;
-        }
-        `);
-
         try {
             if (global.ZeresPluginLibrary) this.initialize();
         }
@@ -96,51 +43,25 @@ class ChannelPermissions {
         }
     }
 
+    //If everything is ok; "after" start()
     initialize() {
         global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
+
+        //Now that we know what we're looking for we can start narrowing it down and listening for activity
+        document.querySelector(`.${BdApi.findModuleByProps("container", "base").sidebar}`).addEventListener('mouseover', this.createToolTip);
+
     }
 
-    stop() { }
-
-    //This stops working when the plugin is "Stopped" or disabled.
-    onSwitch() {
-        let containers = document.querySelectorAll('[class|=containerDefault]');
-        containers.forEach(container =>
-            //Since we just created or stored all the channels, we need to position our toolSpan.
-            //So we add an event which also does not want to bubble
-            container.addEventListener('mouseover', this.adjustPosition, true));
-        containers.forEach(this.createToolTip)
+    stop() {
+        //We also need to stop that activity if it's needed.
+        document.querySelector(`.${BdApi.findModuleByProps("container", "base").sidebar}`).removeEventListener('mouseover', this.createToolTip);
     }
 
-    adjustPosition(e) {
+    createToolTip(e) {
+        //We start with the main channellist holder and target it.
         let container = e.target.closest('[class|=containerDefault]');
-
-        //I have not found a low-cost easy way to check if a voice channel is filled;
-        //and so I simply check if it's a voice channel and force it above. 
-        let voiceChannel = false;
-        if (container.children[0].classList.length < 1)
-            voiceChannel = true;
-
-        //Find our Tool tip.
-        let toolSpan = findTooltip(container);
-
-        //If for whatever reason it can't find it: exit.
-        if (!toolSpan)
-            return;
-
-        if (toolSpanGoesAbove(toolSpan, container, voiceChannel)) {
-            toolSpan.classList.add("above");
-            toolSpan.classList.remove("under");
-        }
-        else {
-            toolSpan.classList.add("under");
-            toolSpan.classList.remove("above");
-        }
-    }
-
-    createToolTip(container) {
-        //Find our Tool tip. If found, exit.
-        if (findTooltip(container))
+        //Halt if there's nothing present.
+        if (!container)
             return;
 
         //Check the internals and look for the Channel property which contains the channel's ID.
@@ -161,10 +82,12 @@ class ChannelPermissions {
         let guild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild(channel.guild_id);
 
         //Time to start the logic.
-        //This returns the actual <span> which is made.
-        //But we never use it outside of logging, only call it.
-        let text = showRoles(guild, channel);
-        //console.log(text);
+        //This returns the actual <div> which is made.
+        let contentHTML = showRoles(guild, channel);
+        //console.log(contentHTML);
+
+        container.onmouseenter = function () { toolTipOnMouseEnter(container, contentHTML); };
+        container.onmouseleave = toolTipOnMouseLeave;
 
         function showRoles(guild, channel) {
             //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
@@ -314,7 +237,7 @@ class ChannelPermissions {
             //If we have anything we need to create the tooltip.
             if (htmlString)
                 //This'll daisychain return the constructed <span>
-                return createTooltip(htmlString, container);
+                return htmlString;
             else {
                 //And if it fucked up we got nothing.
                 return undefined;
@@ -323,52 +246,26 @@ class ChannelPermissions {
     }
 }
 
-function findTooltip(container){
-    for (let i = 0; i < container.children.length; i++)
-        //Check if there are classes
-        if (container.children[i].classList)
-            //Check if it is indeed our tooltip
-            if (container.children[i].classList.contains("tooltiptext"))
-                return container.children[i];
-    return null;
+function toolTipOnMouseEnter(container, contentHTML) {
+    let wrapper = document.createElement('div');
+    let containerRight = parseInt(container.getBoundingClientRect().right);
+    let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5);
+    let layer = BdApi.findModuleByProps("layer");
+    let tooltip = BdApi.findModuleByProps("tooltip");
+    wrapper.innerHTML = `<div class='${layer.layer} ${layer.disabledPointerEvents} toolTipToolTip' style='left: ${containerRight.toString()}px; top: ${containerTop.toString()}px; transform: translateY(-50%);'>
+        <div class="${tooltip.tooltip} ${tooltip.tooltipRight} ${tooltip.tooltipGrey} ${tooltip.tooltipDisablePointerEvents}" style="opacity: 1; transform: none;">
+            <div class="${tooltip.tooltipPointer}">
+            </div>
+            <div class="${tooltip.tooltipContent}">
+                ${contentHTML}
+            </div>
+        </div>
+    </div>`;
+    document.querySelector(`#app-mount > .${layer.layerContainer}`).appendChild(wrapper.firstChild);
 }
 
-function createTooltip(text, container) {
-    //Create <span> object
-    let toolTipElementSpan = document.createElement("span");
-
-    //Add classname for CSS (we start with transition to have it register)
-    toolTipElementSpan.classList.add("tooltiptext")
-
-    //Insert our magnificent text
-    toolTipElementSpan.innerHTML = text;
-
-    //Add our tooltip style to the container and append the span.
-    container.appendChild(toolTipElementSpan);
-
-    //Set position above or under the container (parent)
-    if (toolSpanGoesAbove(toolTipElementSpan, container))
-        toolTipElementSpan.classList.add("above");
-    else
-        toolTipElementSpan.classList.add("under");
-
-    //End it with a return of made object.
-    return toolTipElementSpan;
-}
-
-function toolSpanGoesAbove(toolSpan, container, voiceChannel = false) {
-    if (voiceChannel)
-        return true;
-
-    let parentRect = container.getBoundingClientRect();
-    let offset = ((toolSpan.offsetHeight / 100) * 30) + container.offsetHeight;
-
-    if ((window.innerHeight - parentRect.y) < toolSpan.offsetHeight + offset) {
-        return true;
-    }
-    else {
-        return false;
-    }
+function toolTipOnMouseLeave() {
+    document.querySelector('.toolTipToolTip').remove();
 }
 
 /////////////////////////////////////////////////////////
@@ -477,11 +374,8 @@ function colorCONVERT(color, conv, type) {
 
 function findValue(instance, searchkey) {
     var whitelist = {
-        //return: true,     Causes a RangeError.
-        //alternate: true,  Same
         memoizedProps: true,
         child: true
-        //sibling: true //It's the "Key"-object in here, but that's too generic.
     };
     var blacklist = {
         contextSection: true
