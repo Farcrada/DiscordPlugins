@@ -9,7 +9,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "3.0.0"; }
+    getVersion() { return "3.1.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -41,6 +41,29 @@ class ChannelPermissions {
                 console.error(this.getName() + ".stop()", err);
             }
         }
+
+        let channelPermissionCSS = document.querySelector('#ChannelPermissionCSS');
+        if (channelPermissionCSS)
+            channelPermissionCSS.remove();
+
+        BdApi.injectCSS("ChannelPermissionCSS", `
+        @keyframes tooltipFadeIn {
+            from {
+                opacity: 0.98;
+                transform: scale(0.9875);
+            }
+          
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .toolTipToolTip {
+            transform-origin: left center;
+            animation: tooltipFadeIn 0.15s;
+            width: 300px;
+        }`);
     }
 
     //If everything is ok; "after" start()
@@ -160,32 +183,53 @@ class ChannelPermissions {
 
             //Scour the api some more for styles.
             let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
-            let FlexChild = BdApi.findModuleByProps("flexChild", "flex");
-            let TextSize = BdApi.findModuleByProps("size10", "size14", "size20");
+            let RoleList = BdApi.findModuleByProps("rolesList");
 
             //Set up variable for the HTML string we need to display in our tooltiptext.
-            let htmlString = ``;
+            let htmlString = `<div class = "${RoleList.bodyInnerWrapper}">`;
 
             //Start with the channel topic;
             //Check if it has a topic and regex-replace any breakage with nothing.
             if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, ""))
-                htmlString += `<div class="">Topic:</div><div class=""><div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-topic" style="border-color: rgba(255, 255, 255, 0.6); height: unset !important; padding-top: 5px; padding-bottom: 5px;">${encodeToHTML(channel.topic)}</div></div>`;
+                htmlString += `<div class="${RoleList.bodyTitle}">
+                        Topic:
+                    </div>
+                    <div class="${RoleList.note}">
+                        <div class="${BdApi.findModuleByProps("textarea").textarea} ${BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline}" style="display:inline-block;">
+                            ${channel.topic}
+                        </div>
+                    </div>`;
 
             //The allowed roles, and thus the overwritten roles (those the user already has)
             if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
                 //Title
-                htmlString += `<div class="">Allowed Roles:</div><div class="">`;
+                htmlString += `<div class="${RoleList.bodyTitle}">
+                        Allowed Roles:
+                    </div>
+                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
                 //Loop through the allowed roles
                 for (let role of allowedRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-allowedrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(role.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+                            </div>
+                            <div aria-hidden="true" class="${Role.roleName}">
+                                ${encodeToHTML(role.name)}
+                            </div>
+                        </div>`;
                 }
 
                 //loop through the overwritten roles
                 for (let role of overwrittenRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-overwrittenrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}" style="text-decoration: line-through !important;">${encodeToHTML(role.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+                            </div>
+                            <div aria-hidden="true" class="${Role.roleName}" style="text-decoration: line-through !important;">
+                                ${encodeToHTML(role.name)}
+                            </div>
+                        </div>`;
                 }
 
                 //End it with a /div.
@@ -194,12 +238,21 @@ class ChannelPermissions {
             //Check for allowed users
             if (allowedUsers.length > 0) {
                 //Title
-                htmlString += `<div class="">Allowed Users:</div><div class="">`;
+                htmlString += `<div class="${RoleList.bodyTitle}">
+                        Allowed Users:
+                    </div>
+                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
                 //Loop throught it
                 for (let user of allowedUsers) {
                     let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-denieduser" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(user.nick ? user.nick : user.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+                            </div>
+                            <div class="${Role.roleName}">
+                                ${encodeToHTML(user.nick ? user.nick : user.name)}
+                            </div>
+                        </div>`;
                 }
 
                 //End it.
@@ -208,12 +261,21 @@ class ChannelPermissions {
             //Check for denied roles
             if (deniedRoles.length > 0) {
                 //Title
-                htmlString += `<div class="">Denied Roles:</div><div class="">`;
+                htmlString += `<div class="${RoleList.bodyTitle}">
+                        Denied Roles:
+                    </div>
+                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
                 //Loop throught it
                 for (let role of deniedRoles) {
                     let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-deniedrole" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(role.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+                            </div>
+                            <div class="${Role.roleName}">
+                                ${encodeToHTML(role.name)}
+                            </div>
+                        </div>`;
                 }
 
                 //End it.
@@ -222,17 +284,27 @@ class ChannelPermissions {
             //Check for denied users
             if (deniedUsers.length > 0) {
                 //Title
-                htmlString += `<div class="">Denied Users:</div><div class="">`;
+                htmlString += `<div class="${RoleList.bodyTitle}">
+                        Denied Users:
+                    </div>
+                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
                 //Loop through it.
                 for (let user of deniedUsers) {
                     let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role + FlexChild.flex + Role.alignCenter + Role.wrap + TextSize.size12} SHC-denieduser" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);"><div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});"></div><div class="${Role.roleName}">${encodeToHTML(user.nick ? user.nick : user.name)}</div></div>`;
+                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+                            </div>
+                            <div class="${Role.roleName}">
+                                ${encodeToHTML(user.nick ? user.nick : user.name)}
+                            </div>
+                        </div>`;
                 }
 
                 //End it.
                 htmlString += `</div>`;
             }
+            htmlString += `</div>`;
 
             //If we have anything we need to create the tooltip.
             if (htmlString)
@@ -248,12 +320,12 @@ class ChannelPermissions {
 
 function toolTipOnMouseEnter(container, contentHTML) {
     let wrapper = document.createElement('div');
-    let containerRight = parseInt(container.getBoundingClientRect().right);
-    let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5);
     let layer = BdApi.findModuleByProps("layer");
     let tooltip = BdApi.findModuleByProps("tooltip");
-    wrapper.innerHTML = `<div class='${layer.layer} ${layer.disabledPointerEvents} toolTipToolTip' style='left: ${containerRight.toString()}px; top: ${containerTop.toString()}px; transform: translateY(-50%);'>
-        <div class="${tooltip.tooltip} ${tooltip.tooltipRight} ${tooltip.tooltipGrey} ${tooltip.tooltipDisablePointerEvents}" style="opacity: 1; transform: none;">
+    let listItemTooltip = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
+    
+    wrapper.innerHTML = `<div class='${layer.layer} ${layer.disabledPointerEvents} toolTipToolTip'>
+        <div class="${tooltip.tooltip} ${tooltip.tooltipRight} ${tooltip.tooltipPrimary} ${tooltip.tooltipDisablePointerEvents} ${listItemTooltip}">
             <div class="${tooltip.tooltipPointer}">
             </div>
             <div class="${tooltip.tooltipContent}">
@@ -261,7 +333,15 @@ function toolTipOnMouseEnter(container, contentHTML) {
             </div>
         </div>
     </div>`;
+
+    //This is so fkn scuffed. I need a better solution for this.
     document.querySelector(`#app-mount > .${layer.layerContainer}`).appendChild(wrapper.firstChild);
+
+    wrapper = document.querySelector('.toolTipToolTip');
+
+    let containerRight = parseInt(container.getBoundingClientRect().right);
+    let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5) - (wrapper.offsetHeight * 0.5);
+    wrapper.style = `position: absolute; top: ${containerTop.toString()}px; left: ${containerRight.toString()}px;`;
 }
 
 function toolTipOnMouseLeave() {
