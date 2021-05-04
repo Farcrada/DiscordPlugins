@@ -9,7 +9,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.1.0"; }
+    getVersion() { return "9.1.1"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -46,7 +46,7 @@ class DoubleClickToEdit {
     }
 
     initialize() {
-        ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
+        global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
 
         DoubleClickToEdit.myID = BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id;
     }
@@ -57,8 +57,11 @@ class DoubleClickToEdit {
 
     handler(e) {
         let messagediv = e.target.closest('[class^=message]');
-
         if (!messagediv)
+            return;
+
+        let selected = BdApi.findModuleByProps("message", "selected").selected;
+        if (messagediv.classList.contains(selected))
             return;
 
         let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
