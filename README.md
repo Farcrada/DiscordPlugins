@@ -7,6 +7,9 @@ These plugins require you to have (Bandaged) Better Discord installed: https://b
 # Installation
 Download the `.plugin.js` file and put it inside your plugins folder
 
+## OldColours.css
+This file is to revert to the old colours Discord replaced in the new update. Instead of installing some random theme that is basically just CSS and a link to some website, this bit of CSS you can simply paste in the `Custom CSS` page on your BD settings. Make sure to restart Discord after saving.
+
 ## Plugins folder
 - Press the cogwheel (bottom left) next to the microphone and headphone-icon;
 - Go to `Plugins` at the bottom right;
