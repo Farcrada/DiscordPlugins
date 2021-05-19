@@ -1,15 +1,19 @@
 /**
  * @name ChannelPermissions
+ * @author Farcrada
+ * @version 3.1.0
+ * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Channel-Permissions/ChannelPermissions.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js
  */
 
 
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
-    getDescription() { return "Hover over channels to view their permissions."; }
-    getVersion() { return "3.1.0"; }
+    getDescription() { return "Hover over channels to view their required permissions."; }
+    getVersion() { return "3.1.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -111,87 +115,89 @@ class ChannelPermissions {
 
         container.onmouseenter = function () { toolTipOnMouseEnter(container, contentHTML); };
         container.onmouseleave = toolTipOnMouseLeave;
+    }
+}
 
-        function showRoles(guild, channel) {
-            //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
-            let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
-            let MemberStore = BdApi.findModuleByProps("getMember", "getMembers");
-            let UserStore = BdApi.findModuleByProps("getUser", "getUsers");
+function showRoles(guild, channel) {
+    //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
+    let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
+    let MemberStore = BdApi.findModuleByProps("getMember", "getMembers");
+    let UserStore = BdApi.findModuleByProps("getUser", "getUsers");
 
-            let overrideTypes = Object.keys(PermissionStore.PermissionOverrideType);
+    let overrideTypes = Object.keys(PermissionStore.PermissionOverrideType);
 
-            //Store yourself and create all the role sections.
-            let myMember = MemberStore.getMember(guild.id, BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id);
-            let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
-            let everyoneDenied = false;
+    //Store yourself and create all the role sections.
+    let myMember = MemberStore.getMember(guild.id, BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id);
+    let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
+    let everyoneDenied = false;
 
-            //Loop through all the permissions
-            for (let id in channel.permissionOverwrites) {
-                //Check if the current permission type is a role
-                if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
-                    //And if it's not just @everyopne role
-                    (guild.roles[id] && guild.roles[id].name != "@everyone") &&
-                    //check if it's an allowing permission
-                    ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
+    //Loop through all the permissions
+    for (let id in channel.permissionOverwrites) {
+        //Check if the current permission type is a role
+        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+            //And if it's not just @everyopne role
+            (guild.roles[id] && guild.roles[id].name != "@everyone") &&
+            //Check if it's an allowing permission
+            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
 
-                    //Stripe through those the user has
-                    if (myMember.roles.includes(id))
-                        overwrittenRoles.push(guild.roles[id]);
-                    //And save the rest
-                    else
-                        allowedRoles.push(guild.roles[id]);
-                }
-                //Check if permission is for a single user instead of a role
-                else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
-                    //check if it's an allowing permission
-                    ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
+            //Stripe through those the user has
+            if (myMember.roles.includes(id))
+                overwrittenRoles.push(guild.roles[id]);
+            //And save the rest
+            else
+                allowedRoles.push(guild.roles[id]);
+        }
+        //Check if permission is for a single user instead of a role
+        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+            //Check if it's an allowing permission
+            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
 
-                    //Specific allowed users get added to their own section
-                    let user = UserStore.getUser(id);
-                    let member = MemberStore.getMember(guild.id, id);
+            //Specific allowed users get added to their own section
+            let user = UserStore.getUser(id);
+            let member = MemberStore.getMember(guild.id, id);
 
-                    if (user && member)
-                        allowedUsers.push(Object.assign({ name: user.username }, member));
-                }
-                //Same as the allowed but now for denied roles
-                if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
-                    ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
+            if (user && member)
+                allowedUsers.push(Object.assign({ name: user.username }, member));
+        }
+        //Same as the allowed but now for denied roles
+        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
 
-                    //Specific everyone denied
-                    deniedRoles.push(guild.roles[id]);
+            //Specific everyone denied
+            deniedRoles.push(guild.roles[id]);
 
-                    //If @everyone is denied set the variable to represent this.
-                    if (guild.roles[id].name == "@everyone")
-                        everyoneDenied = true;
-                }
-                //Same as the allowed but now for denied members
-                else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
-                    ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
+            //If @everyone is denied set the variable to represent this.
+            if (guild.roles[id].name == "@everyone")
+                everyoneDenied = true;
+        }
+        //Same as the allowed but now for denied members
+        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
 
-                    //Specific denied users
-                    let user = UserStore.getUser(id);
-                    let member = MemberStore.getMember(guild.id, id);
+            //Specific denied users
+            let user = UserStore.getUser(id);
+            let member = MemberStore.getMember(guild.id, id);
 
-                    if (user && member)
-                        deniedUsers.push(Object.assign({ name: user.username }, member));
-                }
-            }
+            if (user && member)
+                deniedUsers.push(Object.assign({ name: user.username }, member));
+        }
+    }
 
-            //The only logical assumption if @everyone isn't allowed.
-            if (!everyoneDenied)
-                allowedRoles.push({ "name": "@everyone" });
+    //The only logical assumption if @everyone isn't allowed.
+    if (!everyoneDenied)
+        allowedRoles.push({ "name": "@everyone" });
 
-            //Scour the api some more for styles.
-            let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
-            let RoleList = BdApi.findModuleByProps("rolesList");
+    //Scour the api some more for styles.
+    let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
+    let RoleList = BdApi.findModuleByProps("rolesList");
 
-            //Set up variable for the HTML string we need to display in our tooltiptext.
-            let htmlString = `<div class = "${RoleList.bodyInnerWrapper}">`;
+    //Set up variable for the HTML string we need to display in our tooltiptext.
+    let htmlString = `<div class = "${RoleList.bodyInnerWrapper}">`;
 
-            //Start with the channel topic;
-            //Check if it has a topic and regex-replace any breakage with nothing.
-            if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, ""))
-                htmlString += `<div class="${RoleList.bodyTitle}">
+    //Start with the channel topic;
+    //Check if it has a topic and regex-replace any breakage with nothing.
+    if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, ""))
+        htmlString += `<div class="${RoleList.bodyTitle}">
                         Topic:
                     </div>
                     <div class="${RoleList.note}">
@@ -200,121 +206,119 @@ class ChannelPermissions {
                         </div>
                     </div>`;
 
-            //The allowed roles, and thus the overwritten roles (those the user already has)
-            if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
-                //Title
-                htmlString += `<div class="${RoleList.bodyTitle}">
+    //The allowed roles, and thus the overwritten roles (those the user already has)
+    if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
+        //Title
+        htmlString += `<div class="${RoleList.bodyTitle}">
                         Allowed Roles:
                     </div>
                     <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
-                //Loop through the allowed roles
-                for (let role of allowedRoles) {
-                    let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+        //Loop through the allowed roles
+        for (let role of allowedRoles) {
+            let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
+            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
                             <div aria-hidden="true" class="${Role.roleName}">
                                 ${encodeToHTML(role.name)}
                             </div>
                         </div>`;
-                }
+        }
 
-                //loop through the overwritten roles
-                for (let role of overwrittenRoles) {
-                    let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+        //Loop through the overwritten roles
+        for (let role of overwrittenRoles) {
+            let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
+            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
                             <div aria-hidden="true" class="${Role.roleName}" style="text-decoration: line-through !important;">
                                 ${encodeToHTML(role.name)}
                             </div>
                         </div>`;
-                }
+        }
 
-                //End it with a /div.
-                htmlString += `</div>`;
-            }
-            //Check for allowed users
-            if (allowedUsers.length > 0) {
-                //Title
-                htmlString += `<div class="${RoleList.bodyTitle}">
+        //End it with a /div.
+        htmlString += `</div>`;
+    }
+    //Check for allowed users
+    if (allowedUsers.length > 0) {
+        //Title
+        htmlString += `<div class="${RoleList.bodyTitle}">
                         Allowed Users:
                     </div>
                     <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
-                //Loop throught it
-                for (let user of allowedUsers) {
-                    let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+        //Loop throught it
+        for (let user of allowedUsers) {
+            let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
+            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
                             <div class="${Role.roleName}">
                                 ${encodeToHTML(user.nick ? user.nick : user.name)}
                             </div>
                         </div>`;
-                }
+        }
 
-                //End it.
-                htmlString += `</div>`;
-            }
-            //Check for denied roles
-            if (deniedRoles.length > 0) {
-                //Title
-                htmlString += `<div class="${RoleList.bodyTitle}">
+        //End it.
+        htmlString += `</div>`;
+    }
+    //Check for denied roles
+    if (deniedRoles.length > 0) {
+        //Title
+        htmlString += `<div class="${RoleList.bodyTitle}">
                         Denied Roles:
                     </div>
                     <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
-                //Loop throught it
-                for (let role of deniedRoles) {
-                    let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+        //Loop throught it
+        for (let role of deniedRoles) {
+            let color = role.colorString ? colorCONVERT(role.colorString, "RGBCOMP") : [255, 255, 255];
+            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
                             <div class="${Role.roleName}">
                                 ${encodeToHTML(role.name)}
                             </div>
                         </div>`;
-                }
+        }
 
-                //End it.
-                htmlString += `</div>`;
-            }
-            //Check for denied users
-            if (deniedUsers.length > 0) {
-                //Title
-                htmlString += `<div class="${RoleList.bodyTitle}">
+        //End it.
+        htmlString += `</div>`;
+    }
+    //Check for denied users
+    if (deniedUsers.length > 0) {
+        //Title
+        htmlString += `<div class="${RoleList.bodyTitle}">
                         Denied Users:
                     </div>
                     <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
 
-                //Loop through it.
-                for (let user of deniedUsers) {
-                    let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
-                    htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
+        //Loop through it.
+        for (let user of deniedUsers) {
+            let color = user.colorString ? colorCONVERT(user.colorString, "RGBCOMP") : [255, 255, 255];
+            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.6);">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
                             <div class="${Role.roleName}">
                                 ${encodeToHTML(user.nick ? user.nick : user.name)}
                             </div>
                         </div>`;
-                }
-
-                //End it.
-                htmlString += `</div>`;
-            }
-            htmlString += `</div>`;
-
-            //If we have anything we need to create the tooltip.
-            if (htmlString)
-                //This'll daisychain return the constructed <span>
-                return htmlString;
-            else {
-                //And if it fucked up we got nothing.
-                return undefined;
-            }
         }
+
+        //End it.
+        htmlString += `</div>`;
+    }
+    htmlString += `</div>`;
+
+    //If we have anything we need to create the tooltip.
+    if (htmlString)
+        //This'll daisychain return the constructed <span>
+        return htmlString;
+    else {
+        //And if it fucked up we got nothing.
+        return undefined;
     }
 }
 
@@ -323,7 +327,7 @@ function toolTipOnMouseEnter(container, contentHTML) {
     let layer = BdApi.findModuleByProps("layer");
     let tooltip = BdApi.findModuleByProps("tooltip");
     let listItemTooltip = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
-    
+
     wrapper.innerHTML = `<div class='${layer.layer} ${layer.disabledPointerEvents} toolTipToolTip'>
         <div class="${tooltip.tooltip} ${tooltip.tooltipRight} ${tooltip.tooltipPrimary} ${tooltip.tooltipDisablePointerEvents} ${listItemTooltip}">
             <div class="${tooltip.tooltipPointer}">
