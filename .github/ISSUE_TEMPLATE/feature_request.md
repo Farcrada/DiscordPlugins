@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Suggest an idea for a plugin or an entirely new one
 title: "[Feature Request] [PluginName?] Idea?"
 labels: enhancement
 assignees: Farcrada
