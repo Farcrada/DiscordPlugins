@@ -1,8 +1,12 @@
 /**
  * @name HideNSFWChannels
+ * @author Farcrada
+ * @version 1.0.0
+ * @description Hide NSFW channels.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Hide-NSFW-Channels/HideNSFWChannels.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-NSFW-Channels/HideNSFWChannels.plugin.js
  */
 
 
