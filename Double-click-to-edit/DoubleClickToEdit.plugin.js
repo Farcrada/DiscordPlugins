@@ -5,11 +5,14 @@
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
  */
 
+//To avoid running into a race condition or execution order issue, this might be a good solution.
+const InfoStore = BdApi.findModuleByProps("getCurrentUser");
+
 
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.1.3"; }
+    getVersion() { return "9.1.4"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -47,11 +50,6 @@ class DoubleClickToEdit {
         global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
 
         document.addEventListener('dblclick', this.handler);
-
-        //So at the launch it kinda gets scuffed, sooo.
-        setTimeout(function () {
-            DoubleClickToEdit.myID = BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id;
-        }, 1000);
     }
 
     stop() {
@@ -79,10 +77,10 @@ class DoubleClickToEdit {
         let baseMessage = instance && getValueFromKey(instance, "baseMessage");
 
         //Check if the quote or standalone message is yours.
-        let msgYours = messageYours(message, DoubleClickToEdit.myID);
+        let msgYours = messageYours(message, InfoStore.getCurrentUser().id);
         //If double clicked a message with a quote, check if the "base"-message is yours.
-        let baseMsgYours = messageYours(baseMessage, DoubleClickToEdit.myID);
-    
+        let baseMsgYours = messageYours(baseMessage, InfoStore.getCurrentUser().id);
+
         //Message(/quote) isn't yours
         if (!msgYours) {
             message = baseMessage;
