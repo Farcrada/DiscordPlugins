@@ -9,7 +9,7 @@
 class DoubleClickToEdit {
     getName() { return "Double click to edit"; }
     getDescription() { return "Double click messages to edit them."; }
-    getVersion() { return "9.1.1"; }
+    getVersion() { return "9.1.3"; }
     getAuthor() { return "Farcrada, original by Jiiks"; }
 
     start() {
@@ -28,10 +28,8 @@ class DoubleClickToEdit {
             });
         }
 
-        if (global.ZeresPluginLibrary) this.initialize();
-
         try {
-            document.addEventListener('dblclick', this.handler);
+            if (global.ZeresPluginLibrary) this.initialize();
         }
         catch (err) {
             console.error(this.getName(), "fatal error, plugin could not be started!", err);
@@ -48,7 +46,12 @@ class DoubleClickToEdit {
     initialize() {
         global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
 
-        DoubleClickToEdit.myID = BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id;
+        document.addEventListener('dblclick', this.handler);
+
+        //So at the launch it kinda gets scuffed, sooo.
+        setTimeout(function () {
+            DoubleClickToEdit.myID = BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id;
+        }, 1000);
     }
 
     stop() {
@@ -56,21 +59,30 @@ class DoubleClickToEdit {
     }
 
     handler(e) {
+        //Target the message
         let messagediv = e.target.closest('[class^=message]');
+        //If it finds nothing, null it.
         if (!messagediv)
             return;
 
+        //Make sure we're not resetting when the message is already in edit-mode.
         let selected = BdApi.findModuleByProps("message", "selected").selected;
         if (messagediv.classList.contains(selected))
             return;
 
+        //Basically make a HTMLElement/Node interactable with it's React components.
         let instance = messagediv[Object.keys(messagediv).find(key => key.startsWith("__reactInternal"))];
+        //This is filled with the message top to bottom,
+        //if it has a quote the quote will be "message".
         let message = instance && getValueFromKey(instance, "message");
+        //As a result, this will be the actual message you want to edit.
         let baseMessage = instance && getValueFromKey(instance, "baseMessage");
 
+        //Check if the quote or standalone message is yours.
         let msgYours = messageYours(message, DoubleClickToEdit.myID);
+        //If double clicked a message with a quote, check if the "base"-message is yours.
         let baseMsgYours = messageYours(baseMessage, DoubleClickToEdit.myID);
-
+    
         //Message(/quote) isn't yours
         if (!msgYours) {
             message = baseMessage;
@@ -83,6 +95,7 @@ class DoubleClickToEdit {
             //Maybe it is a quote, so check the base message (if it exists)
             if (baseMsgYours)
                 message = baseMessage;
+            //This can also be "undefined", so a simple !baseMsgYours is not gonna work.
             else if (baseMsgYours == false)
                 return;
         }
