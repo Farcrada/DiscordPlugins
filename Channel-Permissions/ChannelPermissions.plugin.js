@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.1.0
+ * @version 3.2.0
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.1.1"; }
+    getVersion() { return "3.2.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -45,29 +45,6 @@ class ChannelPermissions {
                 console.error(this.getName() + ".stop()", err);
             }
         }
-
-        let channelPermissionCSS = document.querySelector('#ChannelPermissionCSS');
-        if (channelPermissionCSS)
-            channelPermissionCSS.remove();
-
-        BdApi.injectCSS("ChannelPermissionCSS", `
-        @keyframes tooltipFadeIn {
-            from {
-                opacity: 0.98;
-                transform: scale(0.9875);
-            }
-          
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .toolTipToolTip {
-            transform-origin: left center;
-            animation: tooltipFadeIn 0.15s;
-            width: 300px;
-        }`);
     }
 
     //If everything is ok; "after" start()
@@ -77,11 +54,41 @@ class ChannelPermissions {
         //Now that we know what we're looking for we can start narrowing it down and listening for activity
         document.querySelector(`.${BdApi.findModuleByProps("container", "base").sidebar}`).addEventListener('mouseover', this.createToolTip);
 
+        checkRemoveCSS();
+
+        BdApi.injectCSS("ChannelPermissionCSS", `
+        @keyframes tooltipCPFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+        }
+        
+        @keyframes tooltipCPFadeOut {
+            to {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+        }
+
+        .tooltipCP {
+            transform-origin: left center;
+            animation: tooltipCPFadeIn 0.1s;
+            width: 300px;
+        }
+        
+        .tooltipCPClosing {
+            transform-origin: left center;
+            animation: tooltipCPFadeOut 0.1s;
+            width: 300px;
+        }`);
     }
 
     stop() {
         //We also need to stop that activity if it's needed.
         document.querySelector(`.${BdApi.findModuleByProps("container", "base").sidebar}`).removeEventListener('mouseover', this.createToolTip);
+
+        checkRemoveCSS();
     }
 
     createToolTip(e) {
@@ -110,82 +117,25 @@ class ChannelPermissions {
 
         //Time to start the logic.
         //This returns the actual <div> which is made.
-        let contentHTML = showRoles(guild, channel);
-        //console.log(contentHTML);
+        let contentHTML = constructToolTipContent(getRoles(guild, channel));
 
+        //Attach events to actually make it work.
         container.onmouseenter = function () { toolTipOnMouseEnter(container, contentHTML); };
         container.onmouseleave = toolTipOnMouseLeave;
     }
 }
 
-function showRoles(guild, channel) {
-    //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
-    let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
-    let MemberStore = BdApi.findModuleByProps("getMember", "getMembers");
-    let UserStore = BdApi.findModuleByProps("getUser", "getUsers");
+//Check for exisitng CSS, and remove it.
+function checkRemoveCSS() {
+    let channelPermissionCSS = document.querySelector('#ChannelPermissionCSS');
+    if (channelPermissionCSS)
+        channelPermissionCSS.remove();
+}
 
-    let overrideTypes = Object.keys(PermissionStore.PermissionOverrideType);
-
-    //Store yourself and create all the role sections.
-    let myMember = MemberStore.getMember(guild.id, BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id);
-    let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
-    let everyoneDenied = false;
-
-    //Loop through all the permissions
-    for (let id in channel.permissionOverwrites) {
-        //Check if the current permission type is a role
-        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
-            //And if it's not just @everyopne role
-            (guild.roles[id] && guild.roles[id].name != "@everyone") &&
-            //Check if it's an allowing permission
-            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
-
-            //Stripe through those the user has
-            if (myMember.roles.includes(id))
-                overwrittenRoles.push(guild.roles[id]);
-            //And save the rest
-            else
-                allowedRoles.push(guild.roles[id]);
-        }
-        //Check if permission is for a single user instead of a role
-        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
-            //Check if it's an allowing permission
-            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
-
-            //Specific allowed users get added to their own section
-            let user = UserStore.getUser(id);
-            let member = MemberStore.getMember(guild.id, id);
-
-            if (user && member)
-                allowedUsers.push(Object.assign({ name: user.username }, member));
-        }
-        //Same as the allowed but now for denied roles
-        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
-            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
-
-            //Specific everyone denied
-            deniedRoles.push(guild.roles[id]);
-
-            //If @everyone is denied set the variable to represent this.
-            if (guild.roles[id].name == "@everyone")
-                everyoneDenied = true;
-        }
-        //Same as the allowed but now for denied members
-        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
-            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
-
-            //Specific denied users
-            let user = UserStore.getUser(id);
-            let member = MemberStore.getMember(guild.id, id);
-
-            if (user && member)
-                deniedUsers.push(Object.assign({ name: user.username }, member));
-        }
-    }
-
-    //The only logical assumption if @everyone isn't allowed.
-    if (!everyoneDenied)
-        allowedRoles.push({ "name": "@everyone" });
+//Construct the tooltip's content from the given roles.
+function constructToolTipContent(channelRolesAndTopic) {
+    //Destructure all the allowed roles from the specific channel
+    let { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic } = channelRolesAndTopic;
 
     //Scour the api some more for styles.
     let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
@@ -196,13 +146,13 @@ function showRoles(guild, channel) {
 
     //Start with the channel topic;
     //Check if it has a topic and regex-replace any breakage with nothing.
-    if (channel.topic && channel.topic.replace(/[\t\n\r\s]/g, ""))
+    if (topic && topic.replace(/[\t\n\r\s]/g, ""))
         htmlString += `<div class="${RoleList.bodyTitle}">
                         Topic:
                     </div>
                     <div class="${RoleList.note}">
                         <div class="${BdApi.findModuleByProps("textarea").textarea} ${BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline}" style="display:inline-block;">
-                            ${channel.topic}
+                            ${topic}
                         </div>
                     </div>`;
 
@@ -322,34 +272,130 @@ function showRoles(guild, channel) {
     }
 }
 
-function toolTipOnMouseEnter(container, contentHTML) {
-    let wrapper = document.createElement('div');
-    let layer = BdApi.findModuleByProps("layer");
-    let tooltip = BdApi.findModuleByProps("tooltip");
-    let listItemTooltip = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
+function getRoles(guild, channel) {
+    //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
+    let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
+    let MemberStore = BdApi.findModuleByProps("getMember", "getMembers");
+    let UserStore = BdApi.findModuleByProps("getUser", "getUsers");
 
-    wrapper.innerHTML = `<div class='${layer.layer} ${layer.disabledPointerEvents} toolTipToolTip'>
-        <div class="${tooltip.tooltip} ${tooltip.tooltipRight} ${tooltip.tooltipPrimary} ${tooltip.tooltipDisablePointerEvents} ${listItemTooltip}">
-            <div class="${tooltip.tooltipPointer}">
+    let overrideTypes = Object.keys(PermissionStore.PermissionOverrideType);
+
+    //Store yourself and create all the role sections.
+    let myMember = MemberStore.getMember(guild.id, BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id);
+    let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
+    let everyoneDenied = false;
+
+    //Loop through all the permissions
+    for (let id in channel.permissionOverwrites) {
+        //Check if the current permission type is a role
+        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+            //And if it's not just @everyopne role
+            (guild.roles[id] && guild.roles[id].name != "@everyone") &&
+            //Check if it's an allowing permission
+            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
+
+            //Stripe through those the user has
+            if (myMember.roles.includes(id))
+                overwrittenRoles.push(guild.roles[id]);
+            //And save the rest
+            else
+                allowedRoles.push(guild.roles[id]);
+        }
+        //Check if permission is for a single user instead of a role
+        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+            //Check if it's an allowing permission
+            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
+
+            //Specific allowed users get added to their own section
+            let user = UserStore.getUser(id);
+            let member = MemberStore.getMember(guild.id, id);
+
+            if (user && member)
+                allowedUsers.push(Object.assign({ name: user.username }, member));
+        }
+        //Same as the allowed but now for denied roles
+        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
+
+            //Specific everyone denied
+            deniedRoles.push(guild.roles[id]);
+
+            //If @everyone is denied set the variable to represent this.
+            if (guild.roles[id].name == "@everyone")
+                everyoneDenied = true;
+        }
+        //Same as the allowed but now for denied members
+        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
+
+            //Specific denied users
+            let user = UserStore.getUser(id);
+            let member = MemberStore.getMember(guild.id, id);
+
+            if (user && member)
+                deniedUsers.push(Object.assign({ name: user.username }, member));
+        }
+    }
+
+    //The only logical assumption if @everyone isn't denied.
+    if (!everyoneDenied)
+        allowedRoles.push({ "name": "@everyone" });
+
+    //Apparently we can't pass this as is, so....
+    let topic = channel.topic;
+
+    //Now return the roles and topic from the channel to be destructured
+    return { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic };
+}
+
+function toolTipOnMouseEnter(container, contentHTML) {
+    //Destroy other closing elements to make sure it doesn't look weird.
+    let closingTooltip = document.querySelector('.tooltipCPClosing')
+    if(closingTooltip)
+        closingTooltip.remove();
+
+    //The wrapper
+    let wrapper = document.createElement('div');
+    //Native tooltip classnames for CSS
+    let layerClasses = BdApi.findModuleByProps("layer");
+    let tooltipClasses = BdApi.findModuleByProps("tooltip");
+    let listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
+    
+    //Construct the tooltip.
+    wrapper.innerHTML = `<div class='${layerClasses.layer} ${layerClasses.disabledPointerEvents} tooltipCP'>
+        <div class="${tooltipClasses.tooltip} ${tooltipClasses.tooltipRight} ${tooltipClasses.tooltipPrimary} ${tooltipClasses.tooltipDisablePointerEvents} ${listItemTooltipClass}">
+            <div class="${tooltipClasses.tooltipPointer}">
             </div>
-            <div class="${tooltip.tooltipContent}">
+            <div class="${tooltipClasses.tooltipContent}">
                 ${contentHTML}
             </div>
         </div>
     </div>`;
 
     //This is so fkn scuffed. I need a better solution for this.
-    document.querySelector(`#app-mount > .${layer.layerContainer}`).appendChild(wrapper.firstChild);
+    document.querySelector(`#app-mount > .${layerClasses.layerContainer}`).appendChild(wrapper.firstChild);
+    //But oh well.
+    let tooltipElement = document.querySelector('.tooltipCP');
 
-    wrapper = document.querySelector('.toolTipToolTip');
-
+    //Get the box centered and next to the channel.
     let containerRight = parseInt(container.getBoundingClientRect().right);
-    let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5) - (wrapper.offsetHeight * 0.5);
-    wrapper.style = `position: absolute; top: ${containerTop.toString()}px; left: ${containerRight.toString()}px;`;
+    let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5) - (tooltipElement.offsetHeight * 0.5);
+    tooltipElement.style = `position: absolute; top: ${containerTop.toString()}px; left: ${(containerRight + 10).toString()}px;`;
 }
 
 function toolTipOnMouseLeave() {
-    document.querySelector('.toolTipToolTip').remove();
+    //Acquire the element, initiate the removal
+    document.querySelector('.tooltipCP').className = "tooltipCPClosing";
+
+    //If it has already been deleted, cancel, if not continue
+    setTimeout(function () {
+        let tooltip = document.querySelector('.tooltipCPClosing');
+        
+        if (tooltip)
+            tooltip.remove();
+
+        return;
+    }, 100);
 }
 
 /////////////////////////////////////////////////////////
