@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.3.0
+ * @version 3.3.1
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.3.0"; }
+    getVersion() { return "3.3.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -100,14 +100,14 @@ class ChannelPermissions {
 
         //Check the internals and look for the Channel property which contains the channel's ID.
         let instance = container[Object.keys(container).find(key => key.startsWith("__reactInternal"))];
-        let instanceChannel = instance && findValue(instance, "channel");
+        let instanceChannel = findValue(instance, "channel");
 
         //This is what happens when consistency isn't upheld 
         if (!instanceChannel) {
             //Since the previous search was fruitless, we need to make it an object
             instanceChannel = {};
             //Then search /RELIABLY/ for the channel ID and 
-            instanceChannel.id = (instance && findValue(instance, "data-list-item-id")).replace(/[^0-9]/g, '');
+            instanceChannel.id = findValue(instance, "data-list-item-id").replace(/[^0-9]/g, '');
         }
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
@@ -141,7 +141,7 @@ function constructToolTipContent(channelRolesAndTopic) {
     let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
     let RoleList = BdApi.findModuleByProps("rolesList");
     //Store color converter (hex -> rgb) and define global alpha.
-    let colorConvert = BdApi.findModuleByProps("getDarkness", "isValidHex");
+    let ColorConvert = BdApi.findModuleByProps("getDarkness", "isValidHex");
     let colorAlpha = 0.6;
 
     //Set up variable for the HTML string we need to display in our tooltiptext.
@@ -169,7 +169,7 @@ function constructToolTipContent(channelRolesAndTopic) {
 
         //Loop through the allowed roles
         for (let role of allowedRoles) {
-            let color = role.colorString ? rgba2array(colorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
+            let color = role.colorString ? rgba2array(ColorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
             htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -181,7 +181,7 @@ function constructToolTipContent(channelRolesAndTopic) {
 
         //Loop through the overwritten roles
         for (let role of overwrittenRoles) {
-            let color = role.colorString ? rgba2array(colorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
+            let color = role.colorString ? rgba2array(ColorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
             htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -204,7 +204,7 @@ function constructToolTipContent(channelRolesAndTopic) {
 
         //Loop throught it
         for (let user of allowedUsers) {
-            let color = user.colorString ? colorConvert.hex2rgb(user.colorString, colorAlpha) : `rgba(255, 255, 255, ${colorAlpha})`;
+            let color = user.colorString ? ColorConvert.hex2rgb(user.colorString, colorAlpha) : `rgba(255, 255, 255, ${colorAlpha})`;
             htmlString += `<div class="${Role.role}" style="border-color: ${color};">
                             <div class="${Role.roleCircle}" style="background-color: ${color};">
                             </div>
@@ -227,7 +227,7 @@ function constructToolTipContent(channelRolesAndTopic) {
 
         //Loop throught it
         for (let role of deniedRoles) {
-            let color = role.colorString ? rgba2array(colorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
+            let color = role.colorString ? rgba2array(ColorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
             htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -250,7 +250,7 @@ function constructToolTipContent(channelRolesAndTopic) {
 
         //Loop through it.
         for (let user of deniedUsers) {
-            let color = user.colorString ? rgba2array(colorConvert.hex2rgb(user.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
+            let color = user.colorString ? rgba2array(ColorConvert.hex2rgb(user.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
             htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -275,6 +275,7 @@ function constructToolTipContent(channelRolesAndTopic) {
     }
 }
 
+//Get the roles of that channel
 function getRoles(guild, channel) {
     //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
     let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
@@ -351,6 +352,7 @@ function getRoles(guild, channel) {
     return { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic };
 }
 
+//Event for when the mouse enters the channel
 function toolTipOnMouseEnter(container, contentHTML) {
     //Destroy other closing elements to make sure it doesn't look weird.
     let closingTooltip = document.querySelector('.tooltipCPClosing')
@@ -386,6 +388,7 @@ function toolTipOnMouseEnter(container, contentHTML) {
     tooltipElement.style = `position: absolute; top: ${containerTop.toString()}px; left: ${(containerRight + 10).toString()}px;`;
 }
 
+//Event for when the mouse leaves the channel
 function toolTipOnMouseLeave() {
     //Acquire the element, initiate the removal
     document.querySelector('.tooltipCP').className = "tooltipCPClosing";
@@ -400,12 +403,6 @@ function toolTipOnMouseLeave() {
         return;
     }, 100);
 }
-
-/////////////////////////////////////////////////////////
-//////                                             //////
-//////  Just functions you need, nothing special   //////
-//////                                             //////
-///////////////////////////////////////////////////////// 
 
 function findValue(instance, searchkey) {
     var whitelist = {
