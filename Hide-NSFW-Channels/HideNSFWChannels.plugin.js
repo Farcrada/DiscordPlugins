@@ -1,7 +1,7 @@
 /**
  * @name HideNSFWChannels
  * @author Farcrada
- * @version 2.0.0
+ * @version 2.1.0
  * @description Hide NSFW channels.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -14,12 +14,13 @@ const config = {
     info: {
         name: "Hide NSFW Channels",
         id: "HideNSFWChannels",
-        description: "Hide NSFW Channels, either et al or by selecting; see settings.",
-        version: "2.0.0",
+        description: "Hide NSFW Channels.",
+        version: "2.1.0",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-NSFW-Channels/HideNSFWChannels.plugin.js"
     },
     settings: {
+        updater: false,
         awaitingUpdate: false,
         selective: true,
         channels: []
@@ -34,23 +35,25 @@ class HideNSFWChannels {
     getAuthor() { return config.info.author; }
 
     start() {
-        if (!global.ZeresPluginLibrary) {
-            BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
-                confirmText: "Download Now",
-                cancelText: "Cancel",
-                onConfirm: () => {
-                    require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
-                        async (error, response, body) => {
-                            if (error)
-                                return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
-                            await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
-                        });
-                }
-            });
-        }
+        //Check if updater is enabled.
+        if (config.settings.updater)
+            if (!global.ZeresPluginLibrary) {
+                BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
+                    confirmText: "Download Now",
+                    cancelText: "Cancel",
+                    onConfirm: () => {
+                        require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
+                            async (error, response, body) => {
+                                if (error)
+                                    return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
+                                await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
+                            });
+                    }
+                });
+            }
 
         try {
-            if (global.ZeresPluginLibrary) this.initialize();
+            this.initialize();
         }
         catch (err) {
             console.error(this.getName(), "fatal error, plugin could not be started!", err);
@@ -65,7 +68,9 @@ class HideNSFWChannels {
     }
 
     initialize() {
-        global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
+        //Check if updater is enabled.
+        if (config.settings.updater && global.ZeresPluginLibrary)
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
 
         loadSettings();
 
@@ -75,6 +80,25 @@ class HideNSFWChannels {
 
     getSettingsPanel() {
         return buildSettingChildren([{
+            type: "toggle",
+            label: "Enable updater (Toggle back and forth to only enable for this session)",
+            checked: config.settings.updater,
+            action: (event) => {
+                //For some reason the "action" only gives the mouse event...
+                //The toggle isn't passed, though it is handled. Unfortunate.
+                let toggled;
+                if (event.target.ariaChecked)
+                    toggled = !(event.target.ariaChecked === "true");
+                else
+                    toggled = !(event.target.closest('[role=button]').ariaChecked === "true");
+
+                config.settings.updater = toggled;
+                if (config.settings.updater)
+                    global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
+                saveSettings();
+            }
+        },
+        {
             type: "toggle",
             label: "Selective mode (Turn this on to right-click select what channels are hidden)",
             checked: config.settings.selective,
@@ -90,6 +114,10 @@ class HideNSFWChannels {
                 config.settings.selective = toggled;
                 //Only update when it is toggled off
                 config.settings.awaitingUpdate = true;
+                if (config.settings.selective)
+                    patchChannelContextMenu();
+                else
+                    BdApi.Patcher.unpatchAll(config.info.id);
                 //Save settings;
                 saveSettings();
             }
@@ -143,14 +171,15 @@ class HideNSFWChannels {
 }
 
 function loadSettings() {
-    config.settings.channels = BdApi.loadData(config.info.id, "channels") ?? [];
+    config.settings.updater = !!BdApi.loadData(config.info.id, "updater");
     config.settings.selective = !!BdApi.loadData(config.info.id, "selective");
+    config.settings.channels = BdApi.loadData(config.info.id, "channels") ?? [];
 }
 
 function saveSettings(added = false) {
-    BdApi.saveData(config.info.id, "selective", config.settings.selective)
-    BdApi.saveData(config.info.id, "channels", config.settings.channels)
-    console.log("saving");
+    BdApi.loadData(config.info.id, "updater", config.settings.updater);
+    BdApi.saveData(config.info.id, "selective", config.settings.selective);
+    BdApi.saveData(config.info.id, "channels", config.settings.channels);
     if (added)
         BdApi.showToast("Channel added", { type: "success", icon: false });
     else
@@ -189,7 +218,7 @@ function patchChannelContextMenu() {
                             //And even more so with channels
                             name: channel.name,
                             id: channel.id,
-                            awaitingUpdate: false
+                            awaitingRemoval: false
                         };
                         //Handle the config and hard save
                         saveChannel(newChannel);
@@ -202,31 +231,22 @@ function patchChannelContextMenu() {
 }
 
 function toggleNSFWChannel(node, id = "") {
-    //If current mode is selective
-    if (config.settings.selective) {
-        //And it has been selected to be hidden, hide it
-        let result = getChannel(id)
-        //Make sure it at least is in the config
-        if (!result) {
-            //Since it's not in the config; show it
-            node.style.display = "block";
-            return;
-        }
-        //And make sure it is awaiting an update
-        if (!result.awaitingUpdate) {
-            //if not it's a new node.
-            node.style.display = "none";
-            return;
-        }
-
-        //Remove it from the config
-        removeChannel(id);
-        //Return it to view
-        node.style.display = "block";
-    }
-    //If it's not selective, it means we hide everything we find
+    let result = getChannel(id)
+    //Make sure it at least is in the config
+    if (!result)
+        node.style.display = getSelective();
+    //If it's not stored
     else
-        node.style.display = "none";
+        //And make sure it is awaiting an update
+        if (!result.awaitingRemoval)
+            //if not it's awaiting an update.
+            node.style.display = "none";
+        else {
+            //Remove it from the config
+            removeChannel(id);
+
+            node.style.display = getSelective();
+        }
 }
 
 function processAwaitingUpdate() {
@@ -247,6 +267,15 @@ function processAwaitingUpdate() {
     config.settings.awaitingUpdate = false;
 }
 
+function getSelective() {
+    //if it's selective
+    if (config.settings.selective)
+        //Return it to view
+        return "block";
+    else
+        return "none";
+}
+
 function getChannel(id) {
     for (let i = 0; i < config.settings.channels.length; i++) {
         //If it isn't our ID skip
@@ -265,6 +294,7 @@ function saveChannel(newChannel) {
 
 function removeChannel(id) {
     config.settings.channels = config.settings.channels.filter(ch => ch.id !== id);
+    //The saving is called at the end of an update (where channels are removed).
 }
 
 function settingsChannels() {
@@ -274,7 +304,7 @@ function settingsChannels() {
             type: "toggle",
             label: `Channel: "${config.settings.channels[i].name}" in: "${config.settings.channels[i].server}" | ${config.settings.channels[i].id}`,
             id: `${config.settings.channels[i].id}`,
-            checked: !config.settings.channels[i].awaitingUpdate,
+            checked: !config.settings.channels[i].awaitingRemoval,
 
             //This is where the for loop no longer works.
             //When a previous item is deleted the index is bigger than what is left in the array
@@ -296,7 +326,7 @@ function settingsChannels() {
 
                 //And, well, reverse the boolean,
                 //because a toggle means it needs to come back.
-                config.settings.awaitingUpdate = !toggled;
+                config.settings.awaitingRemoval = !toggled;
                 config.settings.channels[index].awaitingUpdate = !toggled;
                 element.remove();
                 //Save settings;
