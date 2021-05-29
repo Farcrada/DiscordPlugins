@@ -127,9 +127,9 @@ class ChannelPermissions {
 
 //Check for exisitng CSS, and remove it.
 function checkRemoveCSS() {
-    let channelPermissionCSS = document.querySelector('#ChannelPermissionCSS');
-    if (channelPermissionCSS)
-        channelPermissionCSS.remove();
+    let FarcradaTooltipCSS = document.querySelector('#FarcradaTooltipCSS');
+    if (FarcradaTooltipCSS)
+        FarcradaTooltipCSS.remove();
 }
 
 //Construct the tooltip's content from the given roles.
