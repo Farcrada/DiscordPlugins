@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.3.1
+ * @version 3.3.2
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.3.1"; }
+    getVersion() { return "3.3.2"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -56,30 +56,30 @@ class ChannelPermissions {
 
         checkRemoveCSS();
 
-        BdApi.injectCSS("ChannelPermissionCSS", `
-        @keyframes tooltipCPFadeIn {
+        BdApi.injectCSS("FarcradaTooltipCSS", `
+        @keyframes FarcradaTooltipCSSFadeIn {
             from {
                 opacity: 0;
                 transform: scale(0.95);
             }
         }
         
-        @keyframes tooltipCPFadeOut {
+        @keyframes FarcradaTooltipCSSFadeOut {
             to {
                 opacity: 0;
                 transform: scale(0.95);
             }
         }
 
-        .tooltipCP {
+        .FarcradaTooltip {
             transform-origin: left center;
-            animation: tooltipCPFadeIn 0.1s;
+            animation: FarcradaTooltipCSSFadeIn 0.1s;
             width: 300px;
         }
         
-        .tooltipCPClosing {
+        .FarcradaTooltipClosing {
             transform-origin: left center;
-            animation: tooltipCPFadeOut 0.1s;
+            animation: FarcradaTooltipCSSFadeOut 0.1s;
             width: 300px;
         }`);
     }
