@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.3.3
+ * @version 3.3.4
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.3.3"; }
+    getVersion() { return "3.3.4"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -56,15 +56,15 @@ class ChannelPermissions {
 
         checkRemoveCSS();
 
-        BdApi.injectCSS("FarcradaTooltipLeftCSS", `
-        @keyframes FarcradaTooltipCSSFadeInLeft {
+        BdApi.injectCSS("FarcradaTooltipCSS", `
+        @keyframes FarcradaTooltipCSSFadeIn {
             from {
                 opacity: 0;
                 transform: scale(0.95);
             }
         }
         
-        @keyframes FarcradaTooltipCSSFadeOutLeft {
+        @keyframes FarcradaTooltipCSSFadeOut {
             to {
                 opacity: 0;
                 transform: scale(0.95);
@@ -73,13 +73,13 @@ class ChannelPermissions {
 
         .FarcradaTooltipLeft {
             transform-origin: left center;
-            animation: FarcradaTooltipCSSFadeInLeft 0.1s;
+            animation: FarcradaTooltipCSSFadeIn 0.1s;
             width: 300px;
         }
         
         .FarcradaTooltipLeftClosing {
             transform-origin: left center;
-            animation: FarcradaTooltipCSSFadeOutLeft 0.1s;
+            animation: FarcradaTooltipCSSFadeOut 0.1s;
             width: 300px;
         }`);
     }
@@ -127,7 +127,7 @@ class ChannelPermissions {
 
 //Check for exisitng CSS, and remove it.
 function checkRemoveCSS() {
-    let FarcradaTooltipCSS = document.querySelector('#FarcradaTooltipLeftCSS');
+    let FarcradaTooltipCSS = document.querySelector('#FarcradaTooltipCSS');
     if (FarcradaTooltipCSS)
         FarcradaTooltipCSS.remove();
 }
@@ -355,7 +355,7 @@ function getRoles(guild, channel) {
 //Event for when the mouse enters the channel
 function toolTipOnMouseEnter(container, contentHTML) {
     //Destroy other closing elements to make sure it doesn't look weird.
-    let closingTooltip = document.querySelector('.tooltipCPClosing')
+    let closingTooltip = document.querySelector('.FarcradaTooltipLeftClosing')
     if (closingTooltip)
         closingTooltip.remove();
 
@@ -367,7 +367,7 @@ function toolTipOnMouseEnter(container, contentHTML) {
     let listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
 
     //Construct the tooltip.
-    wrapper.innerHTML = `<div class='${layerClasses.layer} ${layerClasses.disabledPointerEvents} tooltipCP'>
+    wrapper.innerHTML = `<div class='${layerClasses.layer} ${layerClasses.disabledPointerEvents} FarcradaTooltipLeft'>
         <div class="${tooltipClasses.tooltip} ${tooltipClasses.tooltipRight} ${tooltipClasses.tooltipPrimary} ${tooltipClasses.tooltipDisablePointerEvents} ${listItemTooltipClass}">
             <div class="${tooltipClasses.tooltipPointer}">
             </div>
@@ -380,7 +380,7 @@ function toolTipOnMouseEnter(container, contentHTML) {
     //This is so fkn scuffed. I need a better solution for this.
     document.querySelector(`#app-mount > .${layerClasses.layerContainer}`).appendChild(wrapper.firstChild);
     //But oh well.
-    let tooltipElement = document.querySelector('.tooltipCP');
+    let tooltipElement = document.querySelector('.FarcradaTooltipLeft');
 
     //Get the box centered and next to the channel.
     let containerRight = parseInt(container.getBoundingClientRect().right);
@@ -391,11 +391,11 @@ function toolTipOnMouseEnter(container, contentHTML) {
 //Event for when the mouse leaves the channel
 function toolTipOnMouseLeave() {
     //Acquire the element, initiate the removal
-    document.querySelector('.tooltipCP').className = "tooltipCPClosing";
+    document.querySelector('.FarcradaTooltipLeft').className = "FarcradaTooltipLeftClosing";
 
     //If it has already been deleted, cancel, if not continue
     setTimeout(function () {
-        let tooltip = document.querySelector('.tooltipCPClosing');
+        let tooltip = document.querySelector('.FarcradaTooltipLeftClosing');
 
         if (tooltip)
             tooltip.remove();
@@ -438,13 +438,13 @@ function findValue(instance, searchkey) {
     }
 }
 
-function rgba2array(rgba) {
-    let regExp = /\(([^)]+)\)/;
-    return regExp.exec(rgba)[1].split(',');
-}
-
 function encodeToHTML(string) {
     var ele = document.createElement("div");
     ele.innerText = string;
     return ele.innerHTML;
+}
+
+function rgba2array(rgba) {
+    let regExp = /\(([^)]+)\)/;
+    return regExp.exec(rgba)[1].split(',');
 }
