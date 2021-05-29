@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.3.2
+ * @version 3.3.3
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.3.2"; }
+    getVersion() { return "3.3.3"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -56,30 +56,30 @@ class ChannelPermissions {
 
         checkRemoveCSS();
 
-        BdApi.injectCSS("FarcradaTooltipCSS", `
-        @keyframes FarcradaTooltipCSSFadeIn {
+        BdApi.injectCSS("FarcradaTooltipLeftCSS", `
+        @keyframes FarcradaTooltipCSSFadeInLeft {
             from {
                 opacity: 0;
                 transform: scale(0.95);
             }
         }
         
-        @keyframes FarcradaTooltipCSSFadeOut {
+        @keyframes FarcradaTooltipCSSFadeOutLeft {
             to {
                 opacity: 0;
                 transform: scale(0.95);
             }
         }
 
-        .FarcradaTooltip {
+        .FarcradaTooltipLeft {
             transform-origin: left center;
-            animation: FarcradaTooltipCSSFadeIn 0.1s;
+            animation: FarcradaTooltipCSSFadeInLeft 0.1s;
             width: 300px;
         }
         
-        .FarcradaTooltipClosing {
+        .FarcradaTooltipLeftClosing {
             transform-origin: left center;
-            animation: FarcradaTooltipCSSFadeOut 0.1s;
+            animation: FarcradaTooltipCSSFadeOutLeft 0.1s;
             width: 300px;
         }`);
     }
@@ -127,7 +127,7 @@ class ChannelPermissions {
 
 //Check for exisitng CSS, and remove it.
 function checkRemoveCSS() {
-    let FarcradaTooltipCSS = document.querySelector('#FarcradaTooltipCSS');
+    let FarcradaTooltipCSS = document.querySelector('#FarcradaTooltipLeftCSS');
     if (FarcradaTooltipCSS)
         FarcradaTooltipCSS.remove();
 }
