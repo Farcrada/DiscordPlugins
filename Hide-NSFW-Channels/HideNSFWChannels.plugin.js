@@ -1,7 +1,7 @@
 /**
  * @name HideNSFWChannels
  * @author Farcrada
- * @version 2.1.0
+ * @version 2.2.0
  * @description Hide NSFW channels.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide NSFW Channels",
         id: "HideNSFWChannels",
         description: "Hide NSFW Channels.",
-        version: "2.1.0",
+        version: "2.2.0",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-NSFW-Channels/HideNSFWChannels.plugin.js"
     },
@@ -35,22 +35,20 @@ class HideNSFWChannels {
     getAuthor() { return config.info.author; }
 
     start() {
-        //Check if updater is enabled.
-        if (config.settings.updater)
-            if (!global.ZeresPluginLibrary) {
-                BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
-                    confirmText: "Download Now",
-                    cancelText: "Cancel",
-                    onConfirm: () => {
-                        require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
-                            async (error, response, body) => {
-                                if (error)
-                                    return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
-                                await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
-                            });
-                    }
-                });
-            }
+        if (!global.ZeresPluginLibrary) {
+            BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
+                confirmText: "Download Now",
+                cancelText: "Cancel",
+                onConfirm: () => {
+                    require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
+                        async (error, response, body) => {
+                            if (error)
+                                return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
+                            await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
+                        });
+                }
+            });
+        }
 
         try {
             this.initialize();
@@ -112,10 +110,14 @@ class HideNSFWChannels {
                     toggled = !(event.target.closest('[role=button]').ariaChecked === "true");
 
                 config.settings.selective = toggled;
+                console.log(toggled);
                 //Only update when it is toggled off
                 config.settings.awaitingUpdate = true;
-                if (config.settings.selective)
+                if (config.settings.selective === true) {
+                    console.log("fggt")
+
                     patchChannelContextMenu();
+                }
                 else
                     BdApi.Patcher.unpatchAll(config.info.id);
                 //Save settings;
@@ -145,28 +147,30 @@ class HideNSFWChannels {
 
         //Since it's a NodeList, lets array this bitch.
         //But since you can't break in a .forEach(), we opt for .every()
-        Array.from(changes.addedNodes).every(node => {
+        for (let i = 0; i < changes.addedNodes.length; i++) {
+            //cache current node
+            let node = changes.addedNodes[i];
+
             //Sometimes it's not a node, so we have to prevent errors there.
             if (node.nodeType !== Node.ELEMENT_NODE)
-                //Basically means "continue" in .forEach() language
-                return true;
+                continue;
 
             //Sometimes it enters something that has no name
-            if (!node.classList.contains(BdApi.findModuleByProps("containerDefault").containerDefault))
-                return true;
+            if (!node.classList.contains(HideNSFWChannels.containerDefault))
+                continue;
 
             //Get the React properties and look for the Channel object
             let channel = findValue(getPropertyByKey(node, "__reactInternal"), "channel");
             if (!channel)
-                return true;
+                continue;
 
             //Which contains the channel's NSFW flag
             if (!channel.nsfw)
-                return true;
+                continue;
 
             //And of course it's ID
             toggleNSFWChannel(node, channel.id);
-        });
+        };
     }
 }
 
@@ -174,10 +178,24 @@ function loadSettings() {
     config.settings.updater = !!BdApi.loadData(config.info.id, "updater");
     config.settings.selective = !!BdApi.loadData(config.info.id, "selective");
     config.settings.channels = BdApi.loadData(config.info.id, "channels") ?? [];
+
+    //Classes
+    HideNSFWChannels.containerDefault = BdApi.findModuleByProps("containerDefault").containerDefault;
+    HideNSFWChannels.label = BdApi.findModuleByProps("item", "label").label;
+
+    HideNSFWChannels.ce = BdApi.React.createElement;
+    //Main controls used to construct the settings panel
+    HideNSFWChannels.MenuControls = BdApi.findModuleByProps("RadioItem", "Item");
+    //Context controls (mainly just the one item we insert)
+    HideNSFWChannels.MenuItem = BdApi.findModuleByProps("MenuRadioItem", "MenuItem").MenuItem;
+
+    //There are 3 "ChannelListTextChannelContextMenu" modules, and they're seemingly random as fuck.
+    //Today's [0]
+    HideNSFWChannels.channelContextMenu = BdApi.findAllModules(m => m.default && m.default.displayName === "ChannelListTextChannelContextMenu");
 }
 
 function saveSettings(added = false) {
-    BdApi.loadData(config.info.id, "updater", config.settings.updater);
+    BdApi.saveData(config.info.id, "updater", config.settings.updater);
     BdApi.saveData(config.info.id, "selective", config.settings.selective);
     BdApi.saveData(config.info.id, "channels", config.settings.channels);
     if (added)
@@ -187,12 +205,8 @@ function saveSettings(added = false) {
 }
 
 function patchChannelContextMenu() {
-    //There are 3 "ChannelListTextChannelContextMenu" modules,
-    //but only the last one has an "makeOverride" scope with "default";
-    //indicating this is the one to patch.
-    let channelContextMenu = BdApi.findAllModules(m => m.default && m.default.displayName === "ChannelListTextChannelContextMenu")[2];
     //Patch in our context item under our name
-    BdApi.Patcher.after(config.info.id, channelContextMenu, "default", (that, [props], returnValue) => {
+    BdApi.Patcher.after(config.info.id, HideNSFWChannels.channelContextMenu[0], "default", (that, [props], returnValue) => {
         //Get the channel and guild properties 
         let { channel, guild } = props;
 
@@ -250,7 +264,7 @@ function toggleNSFWChannel(node, id = "") {
 }
 
 function processAwaitingUpdate() {
-    //First we have to loop/find if anything is awaiting an update.
+    //First we have to loop/find if anything is awaiting an update (in this view)
     let containerArray = document.querySelectorAll('[class|=containerDefault]');
     for (let container of containerArray) {
         //Get the React properties and look for the Channel object
@@ -321,13 +335,13 @@ function settingsChannels() {
                     toggled = !(event.target.closest('[role=button]').ariaChecked === "true");
                 }
 
-                let channelID = element.querySelector(`.${BdApi.findModuleByProps("item", "label").label}`).innerText.split('|')[1].trim();
+                let channelID = element.querySelector(`.${HideNSFWChannels.label}`).innerText.split('|')[1].trim();
                 let index = config.settings.channels.indexOf(getChannel(channelID));
 
                 //And, well, reverse the boolean,
                 //because a toggle means it needs to come back.
-                config.settings.awaitingRemoval = !toggled;
-                config.settings.channels[index].awaitingUpdate = !toggled;
+                config.settings.awaitingUpdate = !toggled;
+                config.settings.channels[index].awaitingRemoval = !toggled;
                 element.remove();
                 //Save settings;
                 saveSettings();
@@ -338,11 +352,9 @@ function settingsChannels() {
 }
 
 
-const ce = BdApi.React.createElement;
-const MenuControls = BdApi.findModuleByProps("RadioItem", "Item");
 
 function buildContextItem(item) {
-    return ce(BdApi.findModuleByProps("MenuRadioItem", "MenuItem").MenuItem, {
+    return HideNSFWChannels.ce(HideNSFWChannels.MenuItem, {
         ...item,
         id: item.id
     });
@@ -354,16 +366,16 @@ function buildSettingItem(props) {
     let Component;
     switch (type) {
         case "separator":
-            return ce(MenuControls.Separator);
+            return HideNSFWChannels.ce(HideNSFWChannels.MenuControls.Separator);
         case "toggle":
-            Component = MenuControls.CheckboxItem;
+            Component = HideNSFWChannels.MenuControls.CheckboxItem;
             break;
         default:
-            Component = MenuControls.Item
+            Component = HideNSFWChannels.MenuControls.Item
             break;
     }
     props.extended = true;
-    return ce(Component, props);
+    return HideNSFWChannels.ce(Component, props);
 }
 
 function buildSettingChildren(setup) {
