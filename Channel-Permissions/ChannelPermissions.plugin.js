@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.3.4
+ * @version 3.4.0
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.3.4"; }
+    getVersion() { return "3.4.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -51,8 +51,11 @@ class ChannelPermissions {
     initialize() {
         global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
 
+        //Create and cache our class variables
+        createCache();
+
         //Now that we know what we're looking for we can start narrowing it down and listening for activity
-        document.querySelector(`.${BdApi.findModuleByProps("container", "base").sidebar}`).addEventListener('mouseover', this.createToolTip);
+        document.querySelector(`.${ChannelPermissions.sidebar}`).addEventListener('mouseover', this.createToolTip);
 
         checkRemoveCSS();
 
@@ -86,7 +89,7 @@ class ChannelPermissions {
 
     stop() {
         //We also need to stop that activity if it's needed.
-        document.querySelector(`.${BdApi.findModuleByProps("container", "base").sidebar}`).removeEventListener('mouseover', this.createToolTip);
+        document.querySelector(`.${ChannelPermissions.sidebar}`).removeEventListener('mouseover', this.createToolTip);
 
         checkRemoveCSS();
     }
@@ -111,9 +114,9 @@ class ChannelPermissions {
         }
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
-        let ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
-        let channel = ChannelStore.getChannel(instanceChannel.id);
-        let guild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild(channel.guild_id);
+        
+        let channel = ChannelPermissions.ChannelStore.getChannel(instanceChannel.id);
+        let guild = ChannelPermissions.getGuild(channel.guild_id);
 
         //Time to start the logic.
         //This returns the actual <div> which is made.
@@ -123,6 +126,38 @@ class ChannelPermissions {
         container.onmouseenter = function () { toolTipOnMouseEnter(container, contentHTML); };
         container.onmouseleave = toolTipOnMouseLeave;
     }
+}
+
+//Cache expensive `BdApi.findModule` calls.
+function createCache(){
+    //Lose/single classes
+    ChannelPermissions.sidebar = BdApi.findModuleByProps("container", "base").sidebar;
+    ChannelPermissions.textarea = BdApi.findModuleByProps("textarea").textarea;
+    ChannelPermissions.scrollbarGhostHairline = BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline;
+    ChannelPermissions.listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
+
+    //Class collections
+    ChannelPermissions.Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
+    ChannelPermissions.RoleList = BdApi.findModuleByProps("rolesList");
+    ChannelPermissions.layerClasses = BdApi.findModuleByProps("layer");
+    ChannelPermissions.tooltipClasses = BdApi.findModuleByProps("tooltip");
+
+    //Stores
+    ChannelPermissions.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
+    ChannelPermissions.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
+    ChannelPermissions.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
+
+    //Cache the function, makes it easier.
+    ChannelPermissions.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
+    ChannelPermissions.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
+    ChannelPermissions.getUser = BdApi.findModuleByProps("getUser", "getUsers").getUser;
+    //Store color converter (hex -> rgb) and d
+    ChannelPermissions.ColorConvert = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
+
+    //Globals
+    //Define global alpha.
+    ChannelPermissions.colorAlpha = 0.6;
+
 }
 
 //Check for exisitng CSS, and remove it.
@@ -137,24 +172,17 @@ function constructToolTipContent(channelRolesAndTopic) {
     //Destructure all the allowed roles from the specific channel
     let { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic } = channelRolesAndTopic;
 
-    //Scour the api some more for styles.
-    let Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
-    let RoleList = BdApi.findModuleByProps("rolesList");
-    //Store color converter (hex -> rgb) and define global alpha.
-    let ColorConvert = BdApi.findModuleByProps("getDarkness", "isValidHex");
-    let colorAlpha = 0.6;
-
     //Set up variable for the HTML string we need to display in our tooltiptext.
-    let htmlString = `<div class = "${RoleList.bodyInnerWrapper}">`;
+    let htmlString = `<div class = "${ChannelPermissions.RoleList.bodyInnerWrapper}">`;
 
     //Start with the channel topic;
     //Check if it has a topic and regex-replace any breakage with nothing.
     if (topic && topic.replace(/[\t\n\r\s]/g, ""))
-        htmlString += `<div class="${RoleList.bodyTitle}">
+        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
                         Topic:
                     </div>
-                    <div class="${RoleList.note}">
-                        <div class="${BdApi.findModuleByProps("textarea").textarea} ${BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline}" style="display:inline-block;">
+                    <div class="${ChannelPermissions.RoleList.note}">
+                        <div class="${ChannelPermissions.textarea} ${ChannelPermissions.scrollbarGhostHairline}" style="display:inline-block;">
                             ${topic}
                         </div>
                     </div>`;
@@ -162,18 +190,18 @@ function constructToolTipContent(channelRolesAndTopic) {
     //The allowed roles, and thus the overwritten roles (those the user already has)
     if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
         //Title
-        htmlString += `<div class="${RoleList.bodyTitle}">
+        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
                         Allowed Roles:
                     </div>
-                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
+                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
 
         //Loop through the allowed roles
         for (let role of allowedRoles) {
-            let color = role.colorString ? rgba2array(ColorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
-            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            let color = role.colorString ? rgba2array(ChannelPermissions.ColorConvert(role.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
+            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div aria-hidden="true" class="${Role.roleName}">
+                            <div aria-hidden="true" class="${ChannelPermissions.Role.roleName}">
                                 ${encodeToHTML(role.name)}
                             </div>
                         </div>`;
@@ -181,11 +209,11 @@ function constructToolTipContent(channelRolesAndTopic) {
 
         //Loop through the overwritten roles
         for (let role of overwrittenRoles) {
-            let color = role.colorString ? rgba2array(ColorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
-            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            let color = role.colorString ? rgba2array(ChannelPermissions.ColorConvert(role.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
+            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div aria-hidden="true" class="${Role.roleName}" style="text-decoration: line-through !important;">
+                            <div aria-hidden="true" class="${ChannelPermissions.Role.roleName}" style="text-decoration: line-through !important;">
                                 ${encodeToHTML(role.name)}
                             </div>
                         </div>`;
@@ -197,18 +225,18 @@ function constructToolTipContent(channelRolesAndTopic) {
     //Check for allowed users
     if (allowedUsers.length > 0) {
         //Title
-        htmlString += `<div class="${RoleList.bodyTitle}">
+        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
                         Allowed Users:
                     </div>
-                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
+                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
 
         //Loop throught it
         for (let user of allowedUsers) {
-            let color = user.colorString ? ColorConvert.hex2rgb(user.colorString, colorAlpha) : `rgba(255, 255, 255, ${colorAlpha})`;
-            htmlString += `<div class="${Role.role}" style="border-color: ${color};">
-                            <div class="${Role.roleCircle}" style="background-color: ${color};">
+            let color = user.colorString ? ChannelPermissions.ColorConvert(user.colorString, ChannelPermissions.colorAlpha) : `rgba(255, 255, 255, ${ChannelPermissions.colorAlpha})`;
+            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: ${color};">
+                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: ${color};">
                             </div>
-                            <div class="${Role.roleName}">
+                            <div class="${ChannelPermissions.Role.roleName}">
                                 ${encodeToHTML(user.nick ? user.nick : user.name)}
                             </div>
                         </div>`;
@@ -220,18 +248,18 @@ function constructToolTipContent(channelRolesAndTopic) {
     //Check for denied roles
     if (deniedRoles.length > 0) {
         //Title
-        htmlString += `<div class="${RoleList.bodyTitle}">
+        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
                         Denied Roles:
                     </div>
-                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
+                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
 
         //Loop throught it
         for (let role of deniedRoles) {
-            let color = role.colorString ? rgba2array(ColorConvert.hex2rgb(role.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
-            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            let color = role.colorString ? rgba2array(ChannelPermissions.ColorConvert(role.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
+            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div class="${Role.roleName}">
+                            <div class="${ChannelPermissions.Role.roleName}">
                                 ${encodeToHTML(role.name)}
                             </div>
                         </div>`;
@@ -243,18 +271,18 @@ function constructToolTipContent(channelRolesAndTopic) {
     //Check for denied users
     if (deniedUsers.length > 0) {
         //Title
-        htmlString += `<div class="${RoleList.bodyTitle}">
+        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
                         Denied Users:
                     </div>
-                    <div class="${Role.root} ${RoleList.rolesList} ${RoleList.endBodySection}">`;
+                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
 
         //Loop through it.
         for (let user of deniedUsers) {
-            let color = user.colorString ? rgba2array(ColorConvert.hex2rgb(user.colorString, colorAlpha)) : [255, 255, 255, colorAlpha];
-            htmlString += `<div class="${Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            let color = user.colorString ? rgba2array(ChannelPermissions.ColorConvert(user.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
+            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div class="${Role.roleName}">
+                            <div class="${ChannelPermissions.Role.roleName}">
                                 ${encodeToHTML(user.nick ? user.nick : user.name)}
                             </div>
                         </div>`;
@@ -277,26 +305,22 @@ function constructToolTipContent(channelRolesAndTopic) {
 
 //Get the roles of that channel
 function getRoles(guild, channel) {
-    //Save a few calls before-hand to scour for user- and serverdata. The less; the better.
-    let PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
-    let MemberStore = BdApi.findModuleByProps("getMember", "getMembers");
-    let UserStore = BdApi.findModuleByProps("getUser", "getUsers");
 
-    let overrideTypes = Object.keys(PermissionStore.PermissionOverrideType);
+    let overrideTypes = Object.keys(ChannelPermissions.PermissionStore.PermissionOverrideType);
 
     //Store yourself and create all the role sections.
-    let myMember = MemberStore.getMember(guild.id, BdApi.findModuleByProps("getCurrentUser").getCurrentUser().id);
+    let myMember = ChannelPermissions.getMember(guild.id, ChannelPermissions.CurrentUserStore.getCurrentUser().id);
     let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
     let everyoneDenied = false;
 
     //Loop through all the permissions
     for (let id in channel.permissionOverwrites) {
         //Check if the current permission type is a role
-        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
+        if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE) &&
             //And if it's not just @everyopne role
             (guild.roles[id] && guild.roles[id].name != "@everyone") &&
             //Check if it's an allowing permission
-            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
+            ((channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
 
             //Stripe through those the user has
             if (myMember.roles.includes(id))
@@ -306,20 +330,20 @@ function getRoles(guild, channel) {
                 allowedRoles.push(guild.roles[id]);
         }
         //Check if permission is for a single user instead of a role
-        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
+        else if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER) &&
             //Check if it's an allowing permission
-            ((channel.permissionOverwrites[id].allow | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
+            ((channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
 
             //Specific allowed users get added to their own section
-            let user = UserStore.getUser(id);
-            let member = MemberStore.getMember(guild.id, id);
+            let user = ChannelPermissions.getUser(id);
+            let member = ChannelPermissions.getMember(guild.id, id);
 
             if (user && member)
                 allowedUsers.push(Object.assign({ name: user.username }, member));
         }
         //Same as the allowed but now for denied roles
-        if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.ROLE) &&
-            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
+        if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE) &&
+            ((channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
 
             //Specific everyone denied
             deniedRoles.push(guild.roles[id]);
@@ -329,12 +353,12 @@ function getRoles(guild, channel) {
                 everyoneDenied = true;
         }
         //Same as the allowed but now for denied members
-        else if ((channel.permissionOverwrites[id].type == PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == PermissionStore.PermissionOverrideType.MEMBER) &&
-            ((channel.permissionOverwrites[id].deny | PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
+        else if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER) &&
+            ((channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
 
             //Specific denied users
-            let user = UserStore.getUser(id);
-            let member = MemberStore.getMember(guild.id, id);
+            let user = ChannelPermissions.getUser(id);
+            let member = ChannelPermissions.getMember(guild.id, id);
 
             if (user && member)
                 deniedUsers.push(Object.assign({ name: user.username }, member));
@@ -361,24 +385,20 @@ function toolTipOnMouseEnter(container, contentHTML) {
 
     //The wrapper
     let wrapper = document.createElement('div');
-    //Native tooltip classnames for CSS
-    let layerClasses = BdApi.findModuleByProps("layer");
-    let tooltipClasses = BdApi.findModuleByProps("tooltip");
-    let listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
 
     //Construct the tooltip.
-    wrapper.innerHTML = `<div class='${layerClasses.layer} ${layerClasses.disabledPointerEvents} FarcradaTooltipLeft'>
-        <div class="${tooltipClasses.tooltip} ${tooltipClasses.tooltipRight} ${tooltipClasses.tooltipPrimary} ${tooltipClasses.tooltipDisablePointerEvents} ${listItemTooltipClass}">
-            <div class="${tooltipClasses.tooltipPointer}">
+    wrapper.innerHTML = `<div class='${ChannelPermissions.layerClasses.layer} ${ChannelPermissions.layerClasses.disabledPointerEvents} FarcradaTooltipLeft'>
+        <div class="${ChannelPermissions.tooltipClasses.tooltip} ${ChannelPermissions.tooltipClasses.tooltipRight} ${ChannelPermissions.tooltipClasses.tooltipPrimary} ${ChannelPermissions.tooltipClasses.tooltipDisablePointerEvents} ${ChannelPermissions.listItemTooltipClass}">
+            <div class="${ChannelPermissions.tooltipClasses.tooltipPointer}">
             </div>
-            <div class="${tooltipClasses.tooltipContent}">
+            <div class="${ChannelPermissions.tooltipClasses.tooltipContent}">
                 ${contentHTML}
             </div>
         </div>
     </div>`;
 
     //This is so fkn scuffed. I need a better solution for this.
-    document.querySelector(`#app-mount > .${layerClasses.layerContainer}`).appendChild(wrapper.firstChild);
+    document.querySelector(`#app-mount > .${ChannelPermissions.layerClasses.layerContainer}`).appendChild(wrapper.firstChild);
     //But oh well.
     let tooltipElement = document.querySelector('.FarcradaTooltipLeft');
 
