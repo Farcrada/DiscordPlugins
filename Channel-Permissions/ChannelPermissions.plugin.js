@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.4.0
+ * @version 3.5.0
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.4.0"; }
+    getVersion() { return "3.5.0"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -55,7 +55,7 @@ class ChannelPermissions {
         createCache();
 
         //Now that we know what we're looking for we can start narrowing it down and listening for activity
-        document.querySelector(`.${ChannelPermissions.sidebar}`).addEventListener('mouseover', this.createToolTip);
+        document.querySelector(`.${ChannelPermissions.sidebar}`).addEventListener('mouseover', this.createChannelPermissionsToolTip);
 
         checkRemoveCSS();
 
@@ -87,14 +87,24 @@ class ChannelPermissions {
         }`);
     }
 
+    onSwitch() {
+        let closingTooltips = document.querySelectorAll('.FarcradaTooltipLeftClosing')
+        for (let i = 0; i < closingTooltips.length; i++)
+            closingTooltips[i].remove();
+
+        let tooltips = document.querySelectorAll('.FarcradaTooltipLeft');
+        for (let i = 0; i < tooltips.length; i++)
+            tooltips[i].remove();
+    }
+
     stop() {
         //We also need to stop that activity if it's needed.
-        document.querySelector(`.${ChannelPermissions.sidebar}`).removeEventListener('mouseover', this.createToolTip);
+        document.querySelector(`.${ChannelPermissions.sidebar}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
 
         checkRemoveCSS();
     }
 
-    createToolTip(e) {
+    createChannelPermissionsToolTip(e) {
         //We start with the main channellist holder and target it.
         let container = e.target.closest('[class|=containerDefault]');
         //Halt if there's nothing present.
@@ -114,7 +124,7 @@ class ChannelPermissions {
         }
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
-        
+
         let channel = ChannelPermissions.ChannelStore.getChannel(instanceChannel.id);
         let guild = ChannelPermissions.getGuild(channel.guild_id);
 
@@ -129,7 +139,7 @@ class ChannelPermissions {
 }
 
 //Cache expensive `BdApi.findModule` calls.
-function createCache(){
+function createCache() {
     //Lose/single classes
     ChannelPermissions.sidebar = BdApi.findModuleByProps("container", "base").sidebar;
     ChannelPermissions.textarea = BdApi.findModuleByProps("textarea").textarea;
