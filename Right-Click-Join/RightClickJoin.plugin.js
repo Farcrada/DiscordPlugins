@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.0.0
+ * @version 1.1.0
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.0.0",
+        version: "1.1.0",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -66,7 +66,7 @@ class RightClickJoin {
         createCache();
 
         //Patch the guild context menu
-        patchGuildUserContextMenu();
+        patchGuildChannelUserContextMenu();
         //And since it would be handy to join from a DM, it works differently.
         patchDMUserContextMenu();
     }
@@ -96,15 +96,21 @@ function createCache() {
     RightClickJoin.MenuItem = BdApi.findModuleByProps("MenuRadioItem", "MenuItem").MenuItem;
 }
 
-function patchGuildUserContextMenu() {
+function patchGuildChannelUserContextMenu() {
     //Patch in our context item under our name
     BdApi.Patcher.after(config.info.id, RightClickJoin.guildUserContextMenus, "default", (that, [props], returnValue) => {
         //Enter the world of patching
 
         let indexObject = { section: 1, child: 3 };
+        let channel = RightClickJoin.ChannelStore.getChannel(props.channelId)
 
-        //Drop right into it for the guilds; Don't have to catch the return either.
-        constructMenuItem(RightClickJoin.getChannels(props.guildId).VOCAL, props.user.id, returnValue, indexObject)
+        if (channel.isVocal())
+            //if we right click a channel in the list, we can mitigate our intense searching.
+            checkChannelMenuItem(channel, props.user.id, returnValue, indexObject)
+        else
+            //Drop right into it for the guilds; Don't have to catch the return either.
+            checkMenuItem(RightClickJoin.getChannels(props.guildId).VOCAL, props.user.id, returnValue, indexObject)
+
     });
 }
 
@@ -112,7 +118,6 @@ function patchDMUserContextMenu() {
     //Patch in our context item under our name
     BdApi.Patcher.after(config.info.id, RightClickJoin.dmUserContextMenu, "default", (that, [props], returnValue) => {
         //Enter the world of patching
-        console.log(props, returnValue);
 
         //Now we gotta check mutual guilds to see if we can find anything.
         let mutualGuilds = RightClickJoin.getMutualGuilds(props.user.id);
@@ -125,7 +130,7 @@ function patchDMUserContextMenu() {
         for (let i = 0; i < mutualGuilds.length; i++) {
             //We need to have a way to break early if we found anything
             //You can only be connected to one voicechannel anyway.
-            let result = constructMenuItem(RightClickJoin.getChannels(mutualGuilds[i].guild.id).VOCAL, props.user.id, returnValue, indexObject);
+            let result = checkMenuItem(RightClickJoin.getChannels(mutualGuilds[i].guild.id).VOCAL, props.user.id, returnValue, indexObject);
             if (result)
                 break;
         }
@@ -133,33 +138,56 @@ function patchDMUserContextMenu() {
 
 }
 
-function constructMenuItem(voiceChannels, userId, returnValue, indexObject) {
+function constructMenuItem(returnValue, indexObject, channelId) {
+    //Splice and insert our context item
+    //          the menu,      the sections,     the items of this section
+    returnValue.props.children.props.children[indexObject.section].props.children.splice(
+        //We want it after the "call" option.
+        indexObject.child,
+        0,
+        RightClickJoin.ce(RightClickJoin.MenuItem, {
+            //Discord Is One Of Those
+            label: "Join Call",
+            id: config.info.name.toLowerCase().replace(' ', '-'),
+            action: () => {
+                //Joining a voicechannel
+                RightClickJoin.selectVoiceChannel(channelId);
+            }
+        })
+    );
+}
+
+function checkChannelMenuItem(channel, userId, returnValue, indexObject) {
     //Gotta make sure this man is actually in a voice call,
     //otherwise this is a wasted effort.
+
+    //Get all the participants in this voicechannel
+    let participants = RightClickJoin.getVoiceStatesForChannel(channel.id);
+    console.log(participants);
+
+    //Loopy doop
+    for (let id in participants)
+        //If a matching participant is found, engage
+        if (participants[id].userId === userId)
+            constructMenuItem(returnValue, indexObject, channel.id);
+}
+
+function checkMenuItem(voiceChannels, userId, returnValue, indexObject) {
+    //Gotta make sure this man is actually in a voice call,
+    //otherwise this is a wasted effort.
+
     //Loopy whoop
     for (let i = 0; i < voiceChannels.length; i++) {
         //Get all the participants in this voicechannel
-        let participants = RightClickJoin.getVoiceStatesForChannel(voiceChannels[i].channel.id);
+        let channelId = voiceChannels[i].channel.id;
+        let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
+
+        console.log(participants, voiceChannels[i]);
         //Loopy doop
         for (let id in participants)
             //If a matching participant is found, engage
             if (participants[id].userId === userId) {
-                //Splice and insert our context item
-                //          the menu,      the sections,     the items of this section
-                returnValue.props.children.props.children[indexObject.section].props.children.splice(
-                    //We want it after the "call" option.
-                    indexObject.child,
-                    0,
-                    RightClickJoin.ce(RightClickJoin.MenuItem, {
-                        //Discord Is One Of Those
-                        label: "Join Call",
-                        id: config.info.name.toLowerCase().replace(' ', '-'),
-                        action: () => {
-                            //Joining a voicechannel
-                            RightClickJoin.selectVoiceChannel(voiceChannels[i].channel.id);
-                        }
-                    })
-                );
+                constructMenuItem(returnValue, indexObject, channelId);
                 //Return entirely, since only one voicechannel is possible.
                 return true;
             }
