@@ -5,19 +5,19 @@
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
- * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Right-Click-Join/RightClickToJoin.plugin.js
- * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickToJoin.plugin.js
+ * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Right-Click-Join/RightClickJoin.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js
  */
 
 
 const config = {
     info: {
         name: "Right Click Join",
-        id: "RightClickToJoin",
+        id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
         version: "1.0.0",
         author: "Farcrada",
-        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickToJoin.plugin.js"
+        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
 }
 
