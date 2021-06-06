@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.0
+ * @version 1.1.1
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.0",
+        version: "1.1.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -163,7 +163,6 @@ function checkChannelMenuItem(channel, userId, returnValue, indexObject) {
 
     //Get all the participants in this voicechannel
     let participants = RightClickJoin.getVoiceStatesForChannel(channel.id);
-    console.log(participants);
 
     //Loopy doop
     for (let id in participants)
@@ -182,7 +181,6 @@ function checkMenuItem(voiceChannels, userId, returnValue, indexObject) {
         let channelId = voiceChannels[i].channel.id;
         let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
 
-        console.log(participants, voiceChannels[i]);
         //Loopy doop
         for (let id in participants)
             //If a matching participant is found, engage
