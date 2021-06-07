@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.1
+ * @version 1.1.2
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.1",
+        version: "1.1.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -84,11 +84,12 @@ function createCache() {
     RightClickJoin.getVoiceStatesForChannel = BdApi.findModuleByProps("getAllVoiceStates", "getVoiceStatesForChannel").getVoiceStatesForChannel;
     RightClickJoin.getChannels = BdApi.findModuleByProps("getChannels", "getDefaultChannel").getChannels;
     RightClickJoin.selectVoiceChannel = BdApi.findModuleByProps("selectChannel").selectVoiceChannel;
-    RightClickJoin.getMutualGuilds = BdApi.findModuleByProps('isFetching', 'getUserProfile').getMutualGuilds;
+    RightClickJoin.fetchProfile = BdApi.findModuleByProps("open", "fetchProfile").fetchProfile;
 
     //GuildStore
     RightClickJoin.GuildStore = BdApi.findModuleByProps("getGuild", "getGuilds");
     RightClickJoin.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
+    RightClickJoin.MutualStore = BdApi.findModuleByProps("isFetching", "getUserProfile");
 
     //React and shit
     RightClickJoin.ce = BdApi.React.createElement;
@@ -106,7 +107,7 @@ function patchGuildChannelUserContextMenu() {
 
         if (channel.isVocal())
             //if we right click a channel in the list, we can mitigate our intense searching.
-            checkChannelMenuItem(channel, props.user.id, returnValue, indexObject)
+            constructMenuItem(props.user.id, returnValue, indexObject, channel.id)
         else
             //Drop right into it for the guilds; Don't have to catch the return either.
             checkMenuItem(RightClickJoin.getChannels(props.guildId).VOCAL, props.user.id, returnValue, indexObject)
@@ -118,78 +119,70 @@ function patchDMUserContextMenu() {
     //Patch in our context item under our name
     BdApi.Patcher.after(config.info.id, RightClickJoin.dmUserContextMenu, "default", (that, [props], returnValue) => {
         //Enter the world of patching
-
-        //Now we gotta check mutual guilds to see if we can find anything.
-        let mutualGuilds = RightClickJoin.getMutualGuilds(props.user.id);
+        
+        //Now we gotta check mutual guilds to see if we match anything
+        let userId = props.user.id;
+        //                                                    Dumb shit, null checking 'n all.
+        let mutualGuilds = RightClickJoin.MutualStore.getMutualGuilds(userId) ?? [];
         let indexObject = { section: 2, child: 1 };
 
-        if (typeof (mutualGuilds) === "undefined")
-            return;
+        if (mutualGuilds.length < 1) {
+            //Gotta make sure we're not fetching already (or risk spamming the API)
+            if (RightClickJoin.MutualStore.isFetching(userId))
+                return;
 
-        //So we need a loop through if there's many
-        for (let i = 0; i < mutualGuilds.length; i++) {
-            //We need to have a way to break early if we found anything
-            //You can only be connected to one voicechannel anyway.
-            let result = checkMenuItem(RightClickJoin.getChannels(mutualGuilds[i].guild.id).VOCAL, props.user.id, returnValue, indexObject);
-            if (result)
-                break;
+            //Fetch and then we need to fill "mutualGuilds" again, so we just pass the call
+            RightClickJoin.fetchProfile(userId).then(dmPatchHandler(RightClickJoin.MutualStore.getMutualGuilds(userId)));
+        }
+        else
+            dmPatchHandler(mutualGuilds)
+
+        function dmPatchHandler(_mutualGuilds = []) {
+            //So we need a loop through if there's many
+            for (let i = 0; i < _mutualGuilds.length; i++)
+                //We need to have a way to break early
+                //if we find anything to reduce resource consumption
+                //You can only be connected to one voicechannel anyway
+                if (checkMenuItem(RightClickJoin.getChannels(_mutualGuilds[i].guild.id).VOCAL, userId, returnValue, indexObject))
+                    break;
         }
     });
-
-}
-
-function constructMenuItem(returnValue, indexObject, channelId) {
-    //Splice and insert our context item
-    //          the menu,      the sections,     the items of this section
-    returnValue.props.children.props.children[indexObject.section].props.children.splice(
-        //We want it after the "call" option.
-        indexObject.child,
-        0,
-        RightClickJoin.ce(RightClickJoin.MenuItem, {
-            //Discord Is One Of Those
-            label: "Join Call",
-            id: config.info.name.toLowerCase().replace(' ', '-'),
-            action: () => {
-                //Joining a voicechannel
-                RightClickJoin.selectVoiceChannel(channelId);
-            }
-        })
-    );
-}
-
-function checkChannelMenuItem(channel, userId, returnValue, indexObject) {
-    //Gotta make sure this man is actually in a voice call,
-    //otherwise this is a wasted effort.
-
-    //Get all the participants in this voicechannel
-    let participants = RightClickJoin.getVoiceStatesForChannel(channel.id);
-
-    //Loopy doop
-    for (let id in participants)
-        //If a matching participant is found, engage
-        if (participants[id].userId === userId)
-            constructMenuItem(returnValue, indexObject, channel.id);
 }
 
 function checkMenuItem(voiceChannels, userId, returnValue, indexObject) {
-    //Gotta make sure this man is actually in a voice call,
-    //otherwise this is a wasted effort.
-
+    //Gotta make sure this man is actually in a voice call
     //Loopy whoop
-    for (let i = 0; i < voiceChannels.length; i++) {
-        //Get all the participants in this voicechannel
-        let channelId = voiceChannels[i].channel.id;
-        let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
-
-        //Loopy doop
-        for (let id in participants)
-            //If a matching participant is found, engage
-            if (participants[id].userId === userId) {
-                constructMenuItem(returnValue, indexObject, channelId);
-                //Return entirely, since only one voicechannel is possible.
-                return true;
-            }
-    }
+    for (let i = 0; i < voiceChannels.length; i++)
+        if (constructMenuItem(userId, returnValue, indexObject, voiceChannels[i].channel.id))
+            return true;
     //Return false so our DM patch knows what to do.
     return false;
+}
+
+function constructMenuItem(userId, returnValue, indexObject, channelId) {
+    //Get all the participants in this voicechannel
+    let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
+    //Loopy doop
+    for (let id in participants)
+        //If a matching participant is found, engage
+        if (participants[id].userId === userId) {
+            //Splice and insert our context item
+            //          the menu,      the sections,     the items of this section
+            returnValue.props.children.props.children[indexObject.section].props.children.splice(
+                //We want it after the "call" option.
+                indexObject.child,
+                0,
+                RightClickJoin.ce(RightClickJoin.MenuItem, {
+                    //Discord Is One Of Those
+                    label: "Join Call",
+                    id: config.info.name.toLowerCase().replace(' ', '-'),
+                    action: () => {
+                        //Joining a voicechannel
+                        RightClickJoin.selectVoiceChannel(channelId);
+                    }
+                })
+            );
+            //Return entirely, since only one voicechannel is possible.
+            return true;
+        }
 }
