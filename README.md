@@ -2,7 +2,7 @@
 Greetings. I made plugins. Sometimes with all the bullshit torn out or just because the old one doesn't work like it used to.
 
 # Requirements
-These plugins require you to have (Bandaged) Better Discord installed: https://betterdiscord.net/home/ (Simply press the big ol' download button and then download the desired installer).
+These plugins require you to have (Bandaged) Better Discord installed: https://betterdiscord.app/ (Simply press the big ol' download button).
 
 # Installation
 Download the `.plugin.js` file and put it inside your plugins folder
