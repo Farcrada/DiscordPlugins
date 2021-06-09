@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.2
+ * @version 1.1.3
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.2",
+        version: "1.1.3",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -84,7 +84,7 @@ function createCache() {
     RightClickJoin.getVoiceStatesForChannel = BdApi.findModuleByProps("getAllVoiceStates", "getVoiceStatesForChannel").getVoiceStatesForChannel;
     RightClickJoin.getChannels = BdApi.findModuleByProps("getChannels", "getDefaultChannel").getChannels;
     RightClickJoin.selectVoiceChannel = BdApi.findModuleByProps("selectChannel").selectVoiceChannel;
-    RightClickJoin.fetchProfile = BdApi.findModuleByProps("open", "fetchProfile").fetchProfile;
+    RightClickJoin.fetchProfile = BdApi.findModuleByProps("fetchProfile").fetchProfile;
 
     //GuildStore
     RightClickJoin.GuildStore = BdApi.findModuleByProps("getGuild", "getGuilds");
@@ -162,6 +162,7 @@ function checkMenuItem(voiceChannels, userId, returnValue, indexObject) {
 function constructMenuItem(userId, returnValue, indexObject, channelId) {
     //Get all the participants in this voicechannel
     let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
+    console.log ("oops");
     //Loopy doop
     for (let id in participants)
         //If a matching participant is found, engage
