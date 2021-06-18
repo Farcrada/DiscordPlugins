@@ -115,7 +115,7 @@ function patchChannelContextMenu() {
 
         //Check if we have the channel already
         if (config.settings.guilds[props.guild.id])
-            if (config.settings.guilds[props.guild.id].filter(c => c.id === channel.id)) {
+            if (config.settings.guilds[props.guild.id].filter(c => c.id === channel.id).length > 0) {
                 //push and insert our context item
                 returnValue.props.children[1].props.children.push(
                     PinChannels.ce(PinChannels.MenuItem, {
