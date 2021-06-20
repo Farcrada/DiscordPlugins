@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.3
+ * @version 1.1.4
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.3",
+        version: "1.1.4",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
