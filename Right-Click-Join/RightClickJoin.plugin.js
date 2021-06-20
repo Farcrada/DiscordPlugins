@@ -162,7 +162,7 @@ function checkMenuItem(voiceChannels, userId, returnValue, indexObject) {
 function constructMenuItem(userId, returnValue, indexObject, channelId) {
     //Get all the participants in this voicechannel
     let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
-    console.log ("oops");
+    
     //Loopy doop
     for (let id in participants)
         //If a matching participant is found, engage
