@@ -13,3 +13,6 @@ When unpinning the channel gets glicthed at the top.
 - When pinning channels
 
 When pinning channels the update isn't instant and usually requires a switch.
+- When scrolling (down)
+
+Pinned channels duplicate and will flood the channel list; this is likely all connected.
