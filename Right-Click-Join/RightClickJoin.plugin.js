@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.5
+ * @version 1.1.6
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.5",
+        version: "1.1.6",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -83,7 +83,7 @@ class RightClickJoin {
 function createCache() {
     //What context menus we want to patch
     //Allllll the context menus related to users Let's see what sticks.
-    RightClickJoin.guildUserContextMenus = BdApi.findAllModules(m => m.default && m.default.displayName === "GuildChannelUserContextMenu");
+    RightClickJoin.guildUserContextMenus = BdApi.findModule(m => m.default && m.default.displayName === "GuildChannelUserContextMenu");
     RightClickJoin.dmUserContextMenu = BdApi.findModule(m => m.default && m.default.displayName === "DMUserContextMenu");
 
     //Specific functions we need, nothing like a big module
