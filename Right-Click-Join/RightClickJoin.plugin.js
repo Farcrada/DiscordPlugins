@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.4
+ * @version 1.1.5
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.4",
+        version: "1.1.5",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -44,13 +44,21 @@ class RightClickJoin {
             });
         }
 
+        //First try the updater
+        try {
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
+        }
+        catch (err) {
+            console.error(this.getName(), "Plugin Updater could not be reached.", err);
+        }
+
+        //Now try to initialize.
         try {
             this.initialize();
         }
         catch (err) {
-            console.error(this.getName(), "fatal error, plugin could not be started!", err);
-
             try {
+                console.error("Attempting to stop after initialization error...")
                 this.stop();
             }
             catch (err) {
@@ -60,8 +68,6 @@ class RightClickJoin {
     }
 
     initialize() {
-        global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-
         //Create our cache
         createCache();
 
@@ -77,7 +83,7 @@ class RightClickJoin {
 function createCache() {
     //What context menus we want to patch
     //Allllll the context menus related to users Let's see what sticks.
-    RightClickJoin.guildUserContextMenus = BdApi.findModule(m => m.default && m.default.displayName === "GuildChannelUserContextMenu");
+    RightClickJoin.guildUserContextMenus = BdApi.findAllModules(m => m.default && m.default.displayName === "GuildChannelUserContextMenu");
     RightClickJoin.dmUserContextMenu = BdApi.findModule(m => m.default && m.default.displayName === "DMUserContextMenu");
 
     //Specific functions we need, nothing like a big module
@@ -119,7 +125,7 @@ function patchDMUserContextMenu() {
     //Patch in our context item under our name
     BdApi.Patcher.after(config.info.id, RightClickJoin.dmUserContextMenu, "default", (that, [props], returnValue) => {
         //Enter the world of patching
-        
+
         //Now we gotta check mutual guilds to see if we match anything
         let userId = props.user.id;
         //                                                    Dumb shit, null checking 'n all.
@@ -162,7 +168,7 @@ function checkMenuItem(voiceChannels, userId, returnValue, indexObject) {
 function constructMenuItem(userId, returnValue, indexObject, channelId) {
     //Get all the participants in this voicechannel
     let participants = RightClickJoin.getVoiceStatesForChannel(channelId);
-    
+
     //Loopy doop
     for (let id in participants)
         //If a matching participant is found, engage
