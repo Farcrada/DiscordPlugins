@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a report to help us find and fix this bug.
-title: "[BUG] [PluginName?] Description?"
+title: "[PluginName] Description?"
 labels: bug
 assignees: Farcrada
 
