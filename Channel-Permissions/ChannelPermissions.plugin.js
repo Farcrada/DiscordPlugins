@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.5.0
+ * @version 3.5.1
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.5.0"; }
+    getVersion() { return "3.5.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -32,13 +32,30 @@ class ChannelPermissions {
             });
         }
 
+        //First try the updater
         try {
-            if (global.ZeresPluginLibrary) this.initialize();
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
         }
         catch (err) {
-            console.error(this.getName(), "fatal error, plugin could not be started!", err);
-
+            console.error(this.getName(), "Plugin Updater could not be reached, attempting to enable plugin.", err);
             try {
+                BdApi.Plugins.enable("ZeresPluginLibrary");
+                if (!BdApi.Plugins.isEnabled("ZeresPluginLibrary"))
+                    throw new Error("Failed to enable ZeresPluginLibrary.");
+            }
+            catch (err) {
+                console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
+
+            }
+        }
+
+        //Now try to initialize.
+        try {
+            this.initialize();
+        }
+        catch (err) {
+            try {
+                console.error("Attempting to stop after initialization error...")
                 this.stop();
             }
             catch (err) {
@@ -49,8 +66,6 @@ class ChannelPermissions {
 
     //If everything is ok; "after" start()
     initialize() {
-        global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
-
         //Create and cache our class variables
         createCache();
 
@@ -421,14 +436,16 @@ function toolTipOnMouseEnter(container, contentHTML) {
 //Event for when the mouse leaves the channel
 function toolTipOnMouseLeave() {
     //Acquire the element, initiate the removal
-    document.querySelector('.FarcradaTooltipLeft').className = "FarcradaTooltipLeftClosing";
+    let tooltip = document.querySelector('.FarcradaTooltipLeft')
+    if (tooltip)
+        tooltip.className = "FarcradaTooltipLeftClosing";
 
     //If it has already been deleted, cancel, if not continue
     setTimeout(function () {
-        let tooltip = document.querySelector('.FarcradaTooltipLeftClosing');
+        let tooltipClosing = document.querySelector('.FarcradaTooltipLeftClosing');
 
-        if (tooltip)
-            tooltip.remove();
+        if (tooltipClosing)
+            tooltipClosing.remove();
 
         return;
     }, 100);
@@ -475,6 +492,8 @@ function encodeToHTML(string) {
 }
 
 function rgba2array(rgba) {
+    //Expression gets everything betwween '[' and ']'.
     let regExp = /\(([^)]+)\)/;
+    //[0] is with '[]', and [1] is without.
     return regExp.exec(rgba)[1].split(',');
 }
