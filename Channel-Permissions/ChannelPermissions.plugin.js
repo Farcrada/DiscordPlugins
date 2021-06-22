@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.5.1
+ * @version 3.5.2
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.5.1"; }
+    getVersion() { return "3.5.2"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -412,8 +412,8 @@ function toolTipOnMouseEnter(container, contentHTML) {
     let wrapper = document.createElement('div');
 
     //Construct the tooltip.
-    wrapper.innerHTML = `<div class='${ChannelPermissions.layerClasses.layer} ${ChannelPermissions.layerClasses.disabledPointerEvents} FarcradaTooltipLeft'>
-        <div class="${ChannelPermissions.tooltipClasses.tooltip} ${ChannelPermissions.tooltipClasses.tooltipRight} ${ChannelPermissions.tooltipClasses.tooltipPrimary} ${ChannelPermissions.tooltipClasses.tooltipDisablePointerEvents} ${ChannelPermissions.listItemTooltipClass}">
+    wrapper.innerHTML = `<div class="${ChannelPermissions.layerClasses.layer} ${ChannelPermissions.layerClasses.disabledPointerEvents} FarcradaTooltipLeft">
+        <div class="${ChannelPermissions.tooltipClasses.tooltip} ${ChannelPermissions.tooltipClasses.tooltipRight} ${ChannelPermissions.tooltipClasses.tooltipPrimary} ${ChannelPermissions.tooltipClasses.tooltipDisablePointerEvents} ${ChannelPermissions.listItemTooltipClass}" style="white-space:normal !important;">
             <div class="${ChannelPermissions.tooltipClasses.tooltipPointer}">
             </div>
             <div class="${ChannelPermissions.tooltipClasses.tooltipContent}">
@@ -452,10 +452,12 @@ function toolTipOnMouseLeave() {
 }
 
 function findValue(instance, searchkey) {
+    //Where to search
     var whitelist = {
         memoizedProps: true,
         child: true
     };
+    //Where not to search
     var blacklist = {
         contextSection: true
     };
@@ -463,18 +465,25 @@ function findValue(instance, searchkey) {
     return getKey(instance);
 
     function getKey(instance) {
+        //In case the result is never filled, predefine it.
         var result = undefined;
+        //Check if it exists
         if (instance && !Node.prototype.isPrototypeOf(instance)) {
+            //Filter inherited properties
             let keys = Object.getOwnPropertyNames(instance);
+            //As long as result is undefined and within keys.length; loop
             for (let i = 0; result === undefined && i < keys.length; i++) {
                 let key = keys[i];
 
+                //Make sure the property's not blacklisted
                 if (key && !blacklist[key]) {
                     var value = instance[key];
 
+                    //if this is the key we're looking for, return it
                     if (searchkey === key)
-                        result = value;
+                        return value;
 
+                    //If it's an object or function and it is white
                     else if ((typeof value === "object" || typeof value === "function") &&
                         (whitelist[key] || key[0] == "." || !isNaN(key[0])))
                         result = getKey(value);
