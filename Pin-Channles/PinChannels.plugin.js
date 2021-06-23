@@ -1,7 +1,7 @@
 /**
  * @name PinChannels
  * @author Farcrada
- * @version 0.5.1
+ * @version 0.5.2
  * @description Pin a channel to the top for easy access.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Pin Channels",
         id: "PinChannels",
         description: "Pin a channel to the top for easy access.",
-        version: "0.5.1",
+        version: "0.5.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Pin-Channels/PinChannels.plugin.js"
     },
