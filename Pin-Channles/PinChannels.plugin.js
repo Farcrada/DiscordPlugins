@@ -47,13 +47,21 @@ class PinChannels {
             });
         }
 
+        //First try the updater
+        try {
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
+        }
+        catch (err) {
+            console.error(this.getName(), "Plugin Updater could not be reached.", err);
+        }
+
+        //Now try to initialize.
         try {
             this.initialize();
         }
         catch (err) {
-            console.error(this.getName(), "fatal error, plugin could not be started!", err);
-
             try {
+                console.error("Attempting to stop after initialization error...")
                 this.stop();
             }
             catch (err) {
@@ -63,8 +71,6 @@ class PinChannels {
     }
 
     initialize() {
-        global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-
         //Create our cache
         createCache();
 
