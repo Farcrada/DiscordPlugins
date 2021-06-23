@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.5.2
+ * @version 3.5.3
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.5.2"; }
+    getVersion() { return "3.5.3"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -70,7 +70,7 @@ class ChannelPermissions {
         createCache();
 
         //Now that we know what we're looking for we can start narrowing it down and listening for activity
-        document.querySelector(`.${ChannelPermissions.sidebar}`).addEventListener('mouseover', this.createChannelPermissionsToolTip);
+        document.querySelector(`.${ChannelPermissions.sidebarScroller}`).addEventListener('mouseover', this.createChannelPermissionsToolTip);
 
         checkRemoveCSS();
 
@@ -102,6 +102,33 @@ class ChannelPermissions {
         }`);
     }
 
+    //Some plugins patch/rerender/forceupdate the channellist
+    //Which forces us to add our listener again.
+    observer(changes) {
+        //If the node is added, it also means it was removed
+        if (changes.addedNodes.length < 1)
+            return;
+
+        //Check every added node if it has our class.
+        for (let i = 0; i < changes.addedNodes.length; i++) {
+            //Cahce current node for readability;
+            let node = changes.addedNodes[i];
+
+            //Sometimes it's not a node, so we have to prevent errors there.
+            if (node.nodeType !== Node.ELEMENT_NODE)
+                continue;
+
+            //If it doesn't include what we search; next.
+            if (!node.innerHTML.includes(ChannelPermissions.sidebarScroller))
+                continue;
+
+            //If it got added; it got removed. We simply need to add our listener again.
+            document.querySelector(`.${ChannelPermissions.sidebarScroller}`).addEventListener('mouseover', this.createChannelPermissionsToolTip);
+        }
+    }
+
+    //On every switch we make sure that any trailing or bugging tooltips get removed.
+    //This sometimes occurs when the tooltip gets/is shown when you collapse a category.
     onSwitch() {
         let closingTooltips = document.querySelectorAll('.FarcradaTooltipLeftClosing')
         for (let i = 0; i < closingTooltips.length; i++)
@@ -114,7 +141,7 @@ class ChannelPermissions {
 
     stop() {
         //We also need to stop that activity if it's needed.
-        document.querySelector(`.${ChannelPermissions.sidebar}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
+        document.querySelector(`.${ChannelPermissions.sidebarScroller}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
 
         checkRemoveCSS();
     }
@@ -127,7 +154,7 @@ class ChannelPermissions {
             return;
 
         //Check the internals and look for the Channel property which contains the channel's ID.
-        let instance = container[Object.keys(container).find(key => key.startsWith("__reactInternal"))];
+        let instance = BdApi.getInternalInstance(container);
         let instanceChannel = findValue(instance, "channel");
 
         //This is what happens when consistency isn't upheld 
@@ -156,7 +183,7 @@ class ChannelPermissions {
 //Cache expensive `BdApi.findModule` calls.
 function createCache() {
     //Lose/single classes
-    ChannelPermissions.sidebar = BdApi.findModuleByProps("container", "base").sidebar;
+    ChannelPermissions.sidebarScroller = BdApi.findModuleByProps("positionedContainer", "unreadBar").scroller;
     ChannelPermissions.textarea = BdApi.findModuleByProps("textarea").textarea;
     ChannelPermissions.scrollbarGhostHairline = BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline;
     ChannelPermissions.listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
