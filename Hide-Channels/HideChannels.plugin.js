@@ -1,11 +1,11 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 1.0.0
+ * @version 1.0.1
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
- * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Hide-Channels/HideChannels.plugin.js
+ * @source https://github.com/Farcrada/DiscordPlugins/edit/master/Hide-Channels/HideChannels.plugin.js
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js
  */
 
@@ -13,7 +13,7 @@
 class HideChannels {
     getName() { return "Hide Channels"; }
     getDescription() { return "Hide channel list from view."; }
-    getVersion() { return "1.0.0"; }
+    getVersion() { return "1.0.1"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -72,6 +72,20 @@ class HideChannels {
     }
 
     initialize() {
+        //The sidebar to "minimize"/hide
+        HideChannels.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
+        //The header to place the button into.
+        HideChannels.channelHeaderClass = BdApi.findModuleByProps("chat", "title").title;
+
+        //The names we need for CSS
+        HideChannels.hideElementsName = 'hideElement';
+        HideChannels.buttonID = 'toggleChannels';
+        HideChannels.buttonHidden = 'channelsHidden';
+        HideChannels.buttonVisible = 'channelsVisible';
+
+        //Need to make sure we can track the position.
+        HideChannels.channelsHiddenBool = false;
+
         //Check if there is any CSS we have already, and remove it.
         let HideChannelsStyle = document.getElementById("HideChannelsStyle");
         if (HideChannelsStyle)
@@ -86,7 +100,6 @@ class HideChannels {
             background-position: center !important;
             background-size: 100% !important;
             opacity: 0.8;
-            z-index: 2;
             cursor: pointer;
         }
         
@@ -111,28 +124,13 @@ class HideChannels {
         }
         
         /* Set animations */
-        .sidebar-2K8pFh {
+        .${HideChannels.sidebarClass} {
             transition: width 400ms ease;
         }
         /* Animations with element */
-        .sidebar-2K8pFh.hideElement {
+        .${HideChannels.sidebarClass}.hideElement {
             transition: width 400ms ease;
         }`);
-
-        //The sidebar to "minimize"/hide
-        HideChannels.sidebarClass = `.${BdApi.findModuleByProps("container", "base").sidebar}`;
-        //The header to place the button into.
-        HideChannels.channelHeaderClass = `.${BdApi.findModuleByProps("chat", "title").title}`;
-
-        //The names we need for CSS
-        HideChannels.hideElementsName = 'hideElement';
-        HideChannels.buttonID = 'toggleChannels';
-        HideChannels.buttonHidden = 'channelsHidden';
-        HideChannels.buttonVisible = 'channelsVisible';
-
-        //Need to make sure we can track the position.
-        HideChannels.channelsHiddenBool = false;
-
         //Render the button and we're off to the races!
         this.renderButton();
     }
@@ -141,7 +139,7 @@ class HideChannels {
     renderButton() {
         //Create our button, and fetch it's home.
         let button = document.createElement('div'),
-            titleBar = document.querySelector(HideChannels.channelHeaderClass);
+            titleBar = document.querySelector(`.${HideChannels.channelHeaderClass}`);
 
         //If there is no title bar, dump
         if (!titleBar)
@@ -163,7 +161,7 @@ class HideChannels {
     toggleChannels() {
         //Get the button and sidebar
         let button = document.getElementById(HideChannels.buttonID),
-            sidebar = document.querySelector(HideChannels.sidebarClass)
+            sidebar = document.querySelector(`.${HideChannels.sidebarClass}`)
 
         //If it is showing, we need to hide it.
         if (!HideChannels.channelsHiddenBool) {
@@ -197,7 +195,7 @@ class HideChannels {
 
         //And if there are remnants of css left,
         //make sure we remove the class from the sidebar to ensure visual confirmation.
-        let sidebar = document.querySelector(HideChannels.sidebarClass);
+        let sidebar = document.querySelector(`.${HideChannels.sidebarClass}`);
         if (sidebar.classList.contains(HideChannels.hideElementsName))
             sidebar.classList.remove(HideChannels.hideElementsName);
     }
