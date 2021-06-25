@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.5.3
+ * @version 3.5.4
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -13,7 +13,7 @@
 class ChannelPermissions {
     getName() { return "Channel Permissions"; }
     getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.5.3"; }
+    getVersion() { return "3.5.4"; }
     getAuthor() { return "Farcrada"; }
 
     start() {
@@ -55,7 +55,7 @@ class ChannelPermissions {
         }
         catch (err) {
             try {
-                console.error("Attempting to stop after initialization error...")
+                console.error("Attempting to stop after initialization error...", err)
                 this.stop();
             }
             catch (err) {
@@ -68,9 +68,6 @@ class ChannelPermissions {
     initialize() {
         //Create and cache our class variables
         createCache();
-
-        //Now that we know what we're looking for we can start narrowing it down and listening for activity
-        document.querySelector(`.${ChannelPermissions.sidebarScroller}`).addEventListener('mouseover', this.createChannelPermissionsToolTip);
 
         checkRemoveCSS();
 
@@ -102,8 +99,8 @@ class ChannelPermissions {
         }`);
     }
 
-    //Some plugins patch/rerender/forceupdate the channellist
-    //Which forces us to add our listener again.
+    //The scroller is loaded in every server switch.
+    //This is beneficial because adding a listener on start-up causes a null issue.
     observer(changes) {
         //If the node is added, it also means it was removed
         if (changes.addedNodes.length < 1)
