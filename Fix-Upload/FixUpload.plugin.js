@@ -69,20 +69,10 @@ class FixUpload {
 
     initialize() {
         BdApi.Patcher.after(config.info.id, BdApi.findModule(m => m?.default?.displayName === "ChannelAttachMenu"), "default", (that, methodArguments, returnValue) => {
-            //Define props
-            let props = methodArguments[0];
-
-            //Delete the subtext from the returnValue
-            delete returnValue.props.children.find(e => e.key === "upload-file").props.subtext;
-
-            //If options proves to be empty; exit.
-            if (!props.options || props.options.length > 1 || props.options[0]?.type !== "UPLOAD_A_FILE")
-                return;
-
             //Close the popup (since it got clicked)
-            props.onClose();
+            methodArguments[0].onClose();
             //And make sure we go straight into upload.
-            props.onFileUpload();
+            methodArguments[0].onFileUpload();
         });
     }
 
