@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.1.6
+ * @version 1.1.7
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Right Click Join",
         id: "RightClickJoin",
         description: "Right click a user to join a voice channel they are in.",
-        version: "1.1.6",
+        version: "1.1.7",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
     }
@@ -138,7 +138,7 @@ function patchDMUserContextMenu() {
                 return;
 
             //Fetch and then we need to fill "mutualGuilds" again, so we just pass the call
-            RightClickJoin.fetchProfile(userId).then(dmPatchHandler(RightClickJoin.MutualStore.getMutualGuilds(userId)));
+            RightClickJoin.fetchProfile(userId).then(_ => dmPatchHandler(RightClickJoin.MutualStore.getMutualGuilds(userId)));
         }
         else
             dmPatchHandler(mutualGuilds)
