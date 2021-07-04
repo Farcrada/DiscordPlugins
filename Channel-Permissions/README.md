@@ -1,6 +1,9 @@
 # Channel-Permissions
 Show what permissions are required for channels by hovering over them. Inspired by and new/updated version of [DevilBro (Mirco Wittrien)'s original](https://github.com/mwittrien/BetterDiscordAddons/tree/master/Plugins/ShowHiddenChannels) from the earlier days. Functionality is still in the original but not the experience.
 
+![ChannelPermissions](https://user-images.githubusercontent.com/8385001/124384101-5f42a700-dcbf-11eb-9563-2b7aedcbea78.png)
+
+
 ## Latest update:
 - Incredible.  It is now as I had envisioned when I started this plugin. If anyone was waiting on this; thank you for your patience and I hope you enjoy!
 
