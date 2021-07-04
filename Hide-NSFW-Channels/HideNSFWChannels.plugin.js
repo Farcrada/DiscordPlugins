@@ -110,14 +110,11 @@ class HideNSFWChannels {
                     toggled = !(event.target.closest('[role=button]').ariaChecked === "true");
 
                 config.settings.selective = toggled;
-                console.log(toggled);
+                
                 //Only update when it is toggled off
                 config.settings.awaitingUpdate = true;
-                if (config.settings.selective === true) {
-                    console.log("fggt")
-
+                if (config.settings.selective === true) 
                     patchChannelContextMenu();
-                }
                 else
                     BdApi.Patcher.unpatchAll(config.info.id);
                 //Save settings;
