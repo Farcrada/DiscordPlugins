@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.0.0
+ * @version 1.1.0
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.0.0",
+        version: "1.1.0",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     }
@@ -133,6 +133,9 @@ class HideChatIcons {
     onSwitch() {
         if (!document.getElementById(HideChatIcons.buttonID))
             this.renderButton();
+
+        //And check if we need to toggle to keep it collapsed.
+        this.toggleIcons(true);
     }
 
     //Creation and appending our button, i.e. rendering.
@@ -171,30 +174,47 @@ class HideChatIcons {
     }
 
     //Toggle McToggleson.
-    toggleIcons() {
+    toggleIcons(switched) {
         //Get our button and icon holder
         let button = document.getElementById(HideChatIcons.buttonID),
             icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`)
 
-        //If it is showing, we need to hide it.
-        if (!HideChatIcons.iconsHiddenBool) {
+        if (switched)
+            if (HideChatIcons.iconsHiddenBool)
+                hide();
+            else
+                show();
+
+        else
+            //If it is showing, we need to hide it.
+            if (!HideChatIcons.iconsHiddenBool) {
+                hide();
+
+                //Also set the memory.
+                HideChatIcons.iconsHiddenBool = true;
+            }
+            //If it is hidden, we need to show it.
+            else {
+                show();
+                HideChatIcons.iconsHiddenBool = false;
+            }
+
+        function hide() {
             //Change class for CSS
             button.setAttribute('class', HideChatIcons.buttonHidden);
             //And add our hide class to the icon holder for the animation
             icons.classList.add(HideChatIcons.hideElementsName);
-            //Also set the memory.
-            HideChatIcons.iconsHiddenBool = true;
+
+            //Make it collapse after the animation.
             setTimeout(_ => {
                 icons.classList.add(HideChatIcons.forceWidth);
             }, HideChatIcons.animationTime);
         }
-        //If it is hidden, we need to show it.
-        else {
+
+        function show() {
             icons.classList.remove(HideChatIcons.forceWidth);
             button.setAttribute('class', HideChatIcons.buttonVisible);
             icons.classList.remove(HideChatIcons.hideElementsName);
-
-            HideChatIcons.iconsHiddenBool = false;
         }
     }
 
@@ -211,7 +231,7 @@ class HideChatIcons {
         //And if there are remnants of css left,
         //make sure we remove the class from the sidebar to ensure visual confirmation.
         let icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`);
-        
+
         if (icons.classList.contains(HideChatIcons.hideElementsName))
             icons.classList.remove(HideChatIcons.hideElementsName);
 
