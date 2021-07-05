@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.1.0
+ * @version 1.1.2
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.1.0",
+        version: "1.1.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     }
@@ -146,7 +146,7 @@ class HideChatIcons {
             parent = document.querySelector(`#${HideChatIcons.parentID}`);
 
         //If there is no title bar, dump
-        if (!inner)
+        if (!(inner && inner.querySelector(`.${HideChatIcons.buttonClasses.buttons}`).firstChild))
             return;
 
         //Set ID for easy targeting.
@@ -178,6 +178,10 @@ class HideChatIcons {
         //Get our button and icon holder
         let button = document.getElementById(HideChatIcons.buttonID),
             icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`)
+
+        //Mandatory null check for announcement channels.
+        if (!button || !icons)
+            return;
 
         if (switched)
             if (HideChatIcons.iconsHiddenBool)
@@ -213,8 +217,8 @@ class HideChatIcons {
 
         function show() {
             icons.classList.remove(HideChatIcons.forceWidth);
-            button.setAttribute('class', HideChatIcons.buttonVisible);
             icons.classList.remove(HideChatIcons.hideElementsName);
+            button.setAttribute('class', HideChatIcons.buttonVisible);
         }
     }
 
