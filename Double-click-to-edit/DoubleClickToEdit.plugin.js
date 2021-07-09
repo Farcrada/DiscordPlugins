@@ -6,7 +6,7 @@
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
- * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Auto-Scale-Text-Area-Icons/AutoScaleTextAreaIcons.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
  */
 
 
