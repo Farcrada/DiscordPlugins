@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.1.3
+ * @version 1.1.4
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.1.3",
+        version: "1.1.4",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     }
