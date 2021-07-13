@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.1.2
+ * @version 1.1.3
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.1.2",
+        version: "1.1.3",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     }
@@ -68,19 +68,24 @@ class HideChatIcons {
     }
 
     initialize() {
+        //Our name scheme (I should really apply the lesson I learned with unique names)
         HideChatIcons.cssStyle = "HideChatIconsStyle";
         HideChatIcons.parentID = "buttonsParent";
         HideChatIcons.buttonID = "iconButton";
-        HideChatIcons.iconsHiddenBool = false;
         HideChatIcons.buttonHidden = "iconsHidden";
         HideChatIcons.buttonVisible = "iconsVisible";
         HideChatIcons.hideElementsName = "hideIconElement";
         HideChatIcons.forceWidth = "forceIconWidth"
+        //Other variables
+        HideChatIcons.iconsHiddenBool = BdApi.loadData(config.info.id, "hidden");
         HideChatIcons.animationTime = 325;
 
+        //Classes
         HideChatIcons.buttonClasses = BdApi.findModuleByProps("buttons");
 
+        //If any CSS; clear it.
         BdApi.clearCSS(HideChatIcons.cssStyle);
+        //And add it (again)
         BdApi.injectCSS(HideChatIcons.cssStyle, `
         /* Button CSS */
         #${HideChatIcons.buttonID} {
@@ -110,22 +115,22 @@ class HideChatIcons {
             background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CgkJCgkJCgkJCgkJCgkJPHBhdGggZD0iTTE1LjQxIDE2LjU5TDEwLjgzIDEybDQuNTgtNC41OUwxNCA2bC02IDYgNiA2IDEuNDEtMS40MXoiIGZpbGw9IiM0ZjU2NjAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPgoJPC9zdmc+) no-repeat;
         }
 
+        /* Adding this to Buttons collapses it */
         .${HideChatIcons.forceWidth} {
             width: 0px;
         }
-        
         /* Attached class to buttons */
         .${HideChatIcons.hideElementsName} {
             transform: translateX(200px);
             opacity: 0;
         }
-        /* buttons container */
+        /* Buttons container */
         .${HideChatIcons.buttonClasses.buttons} {
             transition: transform ${HideChatIcons.animationTime}ms ease, opacity ${HideChatIcons.animationTime}ms ease;
         }`)
 
         //Render the button and we're off to the races!
-        this.renderButton();
+        this.renderButton(true);
     }
 
     //Everytime we switch the chat window is reloaded;
@@ -139,7 +144,7 @@ class HideChatIcons {
     }
 
     //Creation and appending our button, i.e. rendering.
-    renderButton() {
+    renderButton(startup) {
         //Create our button, and fetch it's home.
         let button = document.createElement('div'),
             inner = document.querySelector(`.${HideChatIcons.buttonClasses.inner}`),
@@ -171,6 +176,9 @@ class HideChatIcons {
             parent.appendChild(button);
 
         inner.appendChild(parent);
+
+        if(startup)
+            this.toggleIcons(true);
     }
 
     //Toggle McToggleson.
@@ -189,7 +197,7 @@ class HideChatIcons {
             else
                 show();
 
-        else
+        else {
             //If it is showing, we need to hide it.
             if (!HideChatIcons.iconsHiddenBool) {
                 hide();
@@ -202,6 +210,10 @@ class HideChatIcons {
                 show();
                 HideChatIcons.iconsHiddenBool = false;
             }
+
+            //Hard save the change
+            BdApi.saveData(config.info.id, "hidden", HideChatIcons.iconsHiddenBool);
+        }
 
         function hide() {
             //Change class for CSS
