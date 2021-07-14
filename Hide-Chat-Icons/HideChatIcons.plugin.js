@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.2.0
+ * @version 1.2.1
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.2.0",
+        version: "1.2.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     }
@@ -104,10 +104,16 @@ class HideChatIcons {
         HideChatIcons.buttonVisible = "iconsVisible";
         HideChatIcons.hideElementsName = "hideIconElement";
         HideChatIcons.forceWidth = "forceIconWidth"
+
         //Other variables
         HideChatIcons.iconsHiddenBool = BdApi.loadData(config.info.id, "hidden");
         HideChatIcons.hoverBool = BdApi.loadData(config.info.id, "hover");
         HideChatIcons.animationTime = 325;
+
+        //Store function calls for the eventListeners
+        HideChatIcons.mouseclickFunc = (e) => this.toggleIcons();
+        HideChatIcons.mouseenterFunc = (e) => this.toggleIcons(false, "entry");
+        HideChatIcons.mouseleaveFunc = (e) => this.toggleIcons(false, "exit");
 
         //Main controls used to construct the settings panel
         HideChatIcons.MenuControls = BdApi.findModuleByProps("RadioItem", "Item");
@@ -202,11 +208,11 @@ class HideChatIcons {
         //Set class according to the current visibility
         button.setAttribute('class', HideChatIcons.iconsHiddenBool ? HideChatIcons.buttonHidden : HideChatIcons.buttonVisible);
         //Add our click event.
-        button.addEventListener("click", (e) => this.toggleIcons());
+        button.addEventListener("click", HideChatIcons.mouseclickFunc);
         //Handle the hovering
         if (HideChatIcons.hoverBool) {
-            button.addEventListener("mouseenter", (e) => this.toggleIcons(false, "entry"));
-            icons.addEventListener("mouseleave", (e) => this.toggleIcons(false, "exit"));
+            button.addEventListener("mouseenter", HideChatIcons.mouseenterFunc);
+            icons.addEventListener("mouseleave", HideChatIcons.mouseleaveFunc);
         }
 
 
@@ -233,6 +239,7 @@ class HideChatIcons {
 
     //Toggle McToggleson.
     toggleIcons(switched, hoverType) {
+        console.log("toggle");
         //Get our button and icon holder
         let button = document.getElementById(HideChatIcons.buttonID),
             icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`)
@@ -330,12 +337,9 @@ class HideChatIcons {
     removeHover() {
         let icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`);
 
-        //TODO: Neither of these want to work. I'm over it; it more or less works.
+        //Thank you Qb and DB
         if (icons)
-            icons.removeEventListener("mouseleave", (e) => this.toggleIcons(false, "exit"));
-
-        //Rerender to remove stubborn listener.
-        BdApi.getInternalInstance(document.querySelector(`.${HideChatIcons.channelTextArea}`)).return.return.return.return.stateNode.forceUpdate();
+            icons.removeEventListener("mouseleave", HideChatIcons.mouseleaveFunc);
     }
 
     buildSettingItem(props) {
