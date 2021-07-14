@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.1.4
+ * @version 1.2.1
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.1.4",
+        version: "1.2.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     }
@@ -67,6 +67,34 @@ class HideChatIcons {
         }
     }
 
+    getSettingsPanel() {
+        return this.buildSettingChildren([{
+            type: "toggle",
+            label: "Hover mode (Turn this on to hover over the icon to expand it.)",
+            checked: HideChatIcons.hoverBool,
+            action: (event) => {
+                //For some reason the "action" only gives the mouse event...
+                //The toggle isn't passed, though it is handled. Unfortunate.
+                let toggled;
+                if (event.target.ariaChecked)
+                    toggled = !(event.target.ariaChecked === "true");
+                else
+                    toggled = !(event.target.closest('[role=button]').ariaChecked === "true");
+
+                //Translate the toggle and save it
+                HideChatIcons.hoverBool = toggled;
+                BdApi.saveData(config.info.id, "hover", HideChatIcons.hoverBool);
+
+                //Remove the hover if needed
+                if (!HideChatIcons.hoverBool)
+                    this.removeHover();
+
+                //Rerender with current settings
+                this.renderButton(true);
+            }
+        }]);
+    }
+
     initialize() {
         //Our name scheme (I should really apply the lesson I learned with unique names)
         HideChatIcons.cssStyle = "HideChatIconsStyle";
@@ -76,12 +104,25 @@ class HideChatIcons {
         HideChatIcons.buttonVisible = "iconsVisible";
         HideChatIcons.hideElementsName = "hideIconElement";
         HideChatIcons.forceWidth = "forceIconWidth"
+
         //Other variables
         HideChatIcons.iconsHiddenBool = BdApi.loadData(config.info.id, "hidden");
+        HideChatIcons.hoverBool = BdApi.loadData(config.info.id, "hover");
         HideChatIcons.animationTime = 325;
+
+        //Store function calls for the eventListeners
+        HideChatIcons.mouseclickFunc = (e) => this.toggleIcons();
+        HideChatIcons.mouseenterFunc = (e) => this.toggleIcons(false, "entry");
+        HideChatIcons.mouseleaveFunc = (e) => this.toggleIcons(false, "exit");
+
+        //Main controls used to construct the settings panel
+        HideChatIcons.MenuControls = BdApi.findModuleByProps("RadioItem", "Item");
 
         //Classes
         HideChatIcons.buttonClasses = BdApi.findModuleByProps("buttons");
+
+        //Class to rerender the channel area
+        HideChatIcons.channelTextArea = BdApi.findModuleByProps("channelTextArea").channelTextArea;
 
         //If any CSS; clear it.
         BdApi.clearCSS(HideChatIcons.cssStyle);
@@ -136,8 +177,7 @@ class HideChatIcons {
     //Everytime we switch the chat window is reloaded;
     //as a result we need to check and potentially render the button again.
     onSwitch() {
-        if (!document.getElementById(HideChatIcons.buttonID))
-            this.renderButton();
+        this.renderButton();
 
         //And check if we need to toggle to keep it collapsed.
         this.toggleIcons(true);
@@ -145,13 +185,22 @@ class HideChatIcons {
 
     //Creation and appending our button, i.e. rendering.
     renderButton(startup) {
+        //This only happens when we're starting/rerendering
+        if (startup) {
+            //As a precaution, we're going to remove the button
+            let button = document.getElementById(HideChatIcons.buttonID)
+            if (button)
+                button.remove();
+        }
+
         //Create our button, and fetch it's home.
         let button = document.createElement('div'),
             inner = document.querySelector(`.${HideChatIcons.buttonClasses.inner}`),
-            parent = document.querySelector(`#${HideChatIcons.parentID}`);
+            icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`),
+            parent = document.getElementById(HideChatIcons.parentID);
 
-        //If there is no title bar, dump
-        if (!(inner && inner.querySelector(`.${HideChatIcons.buttonClasses.buttons}`).firstChild))
+        //If there are no icons, exit
+        if (!(inner && icons.firstChild))
             return;
 
         //Set ID for easy targeting.
@@ -159,10 +208,13 @@ class HideChatIcons {
         //Set class according to the current visibility
         button.setAttribute('class', HideChatIcons.iconsHiddenBool ? HideChatIcons.buttonHidden : HideChatIcons.buttonVisible);
         //Add our click event.
-        button.addEventListener('click', () => this.toggleIcons());
+        button.addEventListener("click", HideChatIcons.mouseclickFunc);
+        //Handle the hovering
+        if (HideChatIcons.hoverBool) {
+            button.addEventListener("mouseenter", HideChatIcons.mouseenterFunc);
+            icons.addEventListener("mouseleave", HideChatIcons.mouseleaveFunc);
+        }
 
-        //Check for one of my other plugins
-        let deleteButton = inner.querySelector("#deleteButton");
 
         //Insert it nested, so it all looks uniform
         if (!parent) {
@@ -170,19 +222,24 @@ class HideChatIcons {
             parent.setAttribute('id', HideChatIcons.parentID);
         }
 
+        //Check for one of my other plugins
+        let deleteButton = inner.querySelector("#deleteButton");
         if (deleteButton)
             parent.insertBefore(button, deleteButton);
         else
             parent.appendChild(button);
 
+        //And add the party to the right place
         inner.appendChild(parent);
 
-        if(startup)
+        //Needs to be last in case our button still needs to be constructed
+        if (startup)
             this.toggleIcons(true);
     }
 
     //Toggle McToggleson.
-    toggleIcons(switched) {
+    toggleIcons(switched, hoverType) {
+        console.log("toggle");
         //Get our button and icon holder
         let button = document.getElementById(HideChatIcons.buttonID),
             icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`)
@@ -200,13 +257,24 @@ class HideChatIcons {
         else {
             //If it is showing, we need to hide it.
             if (!HideChatIcons.iconsHiddenBool) {
-                hide();
+                //Check for hover
+                if (HideChatIcons.hoverBool)
+                    //Validate our hover
+                    if (hoverType !== "exit")
+                        return;
 
+                hide();
                 //Also set the memory.
                 HideChatIcons.iconsHiddenBool = true;
             }
             //If it is hidden, we need to show it.
             else {
+                //Check for hover
+                if (HideChatIcons.hoverBool)
+                    //Validate our hover
+                    if (hoverType !== "entry")
+                        return;
+
                 show();
                 HideChatIcons.iconsHiddenBool = false;
             }
@@ -239,19 +307,63 @@ class HideChatIcons {
         //Our CSS
         BdApi.clearCSS(HideChatIcons.cssStyle)
 
-        //Our button
-        let button = document.getElementById(HideChatIcons.buttonID);
+        //Fetch and save nodes
+        let button = document.getElementById(HideChatIcons.buttonID),
+            icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`),
+            parent = document.getElementById(HideChatIcons.parentID);
+
+        //Our button    
         if (button)
             button.remove();
 
-        //And if there are remnants of css left,
-        //make sure we remove the class from the sidebar to ensure visual confirmation.
+        //Discord's buttons (dubbed: "icons") container
+        if (icons) {
+            //Remove any classes that we might've left
+            if (icons.classList.contains(HideChatIcons.hideElementsName))
+                icons.classList.remove(HideChatIcons.hideElementsName);
+
+            if (icons.classList.contains(HideChatIcons.forceWidth))
+                icons.classList.remove(HideChatIcons.forceWidth);
+        }
+
+        //If there's nothing in our parent, we can just remove it.
+        if (parent && !parent.firstChild)
+            parent.remove();
+
+        this.removeHover();
+    }
+
+    //Remove the eventlisteners for hovering
+    removeHover() {
         let icons = document.querySelector(`.${HideChatIcons.buttonClasses.buttons}`);
 
-        if (icons.classList.contains(HideChatIcons.hideElementsName))
-            icons.classList.remove(HideChatIcons.hideElementsName);
+        //Thank you Qb and DB
+        if (icons)
+            icons.removeEventListener("mouseleave", HideChatIcons.mouseleaveFunc);
+    }
 
-        if (icons.classList.contains(HideChatIcons.forceWidth))
-            icons.classList.remove(HideChatIcons.forceWidth);
+    buildSettingItem(props) {
+        let { type } = props;
+
+        let Component;
+        switch (type) {
+            case "separator":
+                return BdApi.React.createElement(HideChatIcons.MenuControls.Separator);
+            case "toggle":
+                Component = HideChatIcons.MenuControls.CheckboxItem;
+                break;
+            default:
+                Component = HideChatIcons.MenuControls.Item
+                break;
+        }
+        props.extended = true;
+        return BdApi.React.createElement(Component, props);
+    }
+
+    buildSettingChildren(setup) {
+        let mapper = s => {
+            return this.buildSettingItem(s);
+        };
+        return setup.map(mapper).filter(i => i);
     }
 }
