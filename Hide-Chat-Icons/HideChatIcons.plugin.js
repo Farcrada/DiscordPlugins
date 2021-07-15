@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.3.0
+ * @version 1.3.1
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.3.0",
+        version: "1.3.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     },
@@ -106,6 +106,11 @@ class HideChatIcons {
             }
         }]);
     }
+
+    //Store function calls for the eventListeners
+    mouseclickFunc = (e) => this.toggleIcons();
+    mouseenterFunc = (e) => this.toggleIcons(false, "entry");
+    mouseleaveFunc = (e) => this.toggleIcons(false, "exit");
 
     initialize() {
         //Class variables
@@ -336,11 +341,6 @@ class HideChatIcons {
         if (icons)
             icons.removeEventListener("mouseleave", this.mouseleaveFunc);
     }
-
-    //Store function calls for the eventListeners
-    mouseclickFunc = (e) => this.toggleIcons();
-    mouseenterFunc = (e) => this.toggleIcons(false, "entry");
-    mouseleaveFunc = (e) => this.toggleIcons(false, "exit");
 
     buildSettingItem(props) {
         let { type } = props;
