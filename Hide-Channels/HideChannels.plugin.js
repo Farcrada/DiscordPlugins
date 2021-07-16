@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 1.0.1
+ * @version 1.1.0
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -10,11 +10,31 @@
  */
 
 
+const config = {
+    info: {
+        name: "Hide Channels",
+        id: "HideChannels",
+        description: "Hide channel list from view.",
+        version: "1.1.0",
+        author: "Farcrada",
+        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
+    },
+    constants: {
+        //The names we need for CSS
+        cssStyle: "HideChannelsStyle",
+        hideElementsName: "hideChannelElement",
+        buttonID: "toggleChannels",
+        buttonHidden: "channelsHidden",
+        buttonVisible: "channelsVisible"
+    }
+}
+
+
 class HideChannels {
-    getName() { return "Hide Channels"; }
-    getDescription() { return "Hide channel list from view."; }
-    getVersion() { return "1.0.1"; }
-    getAuthor() { return "Farcrada"; }
+    getName() { return config.info.name; }
+    getDescription() { return config.info.description; }
+    getVersion() { return config.info.version; }
+    getAuthor() { return config.info.author; }
 
     start() {
         if (!global.ZeresPluginLibrary) {
@@ -34,7 +54,7 @@ class HideChannels {
 
         //First try the updater
         try {
-            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js");
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
         }
         catch (err) {
             console.error(this.getName(), "Plugin Updater could not be reached, attempting to enable plugin.", err);
@@ -55,7 +75,7 @@ class HideChannels {
         }
         catch (err) {
             try {
-                console.error("Attempting to stop after initialization error...")
+                console.error("Attempting to stop after initialization error...", err)
                 this.stop();
             }
             catch (err) {
@@ -67,34 +87,26 @@ class HideChannels {
     //Everytime we switch the chat window is reloaded;
     //as a result we need to check and potentially render the button again.
     onSwitch() {
-        if (!document.getElementById(HideChannels.buttonID))
+        if (!document.getElementById(config.constants.buttonID))
             this.renderButton();
     }
 
     initialize() {
         //The sidebar to "minimize"/hide
-        HideChannels.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
+        this.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
         //The header to place the button into.
-        HideChannels.channelHeaderClass = BdApi.findModuleByProps("chat", "title").title;
-
-        //The names we need for CSS
-        HideChannels.hideElementsName = 'hideElement';
-        HideChannels.buttonID = 'toggleChannels';
-        HideChannels.buttonHidden = 'channelsHidden';
-        HideChannels.buttonVisible = 'channelsVisible';
+        this.channelHeaderClass = BdApi.findModuleByProps("chat", "title").title;
 
         //Need to make sure we can track the position.
-        HideChannels.channelsHiddenBool = false;
+        this.channelsHiddenBool = false;
 
         //Check if there is any CSS we have already, and remove it.
-        let HideChannelsStyle = document.getElementById("HideChannelsStyle");
-        if (HideChannelsStyle)
-            HideChannelsStyle.parentElement.removeChild(HideChannelsStyle);
+        BdApi.clearCSS(config.constants.cssStyle);
 
         //Now inject our (new) CSS
-        BdApi.injectCSS("HideChannelsStyle", `
+        BdApi.injectCSS(config.constants.cssStyle, `
         /* Button CSS */
-        #toggleChannels {
+        #${config.constants.buttonID} {
             min-width: 24px;
             height: 24px;
             background-position: center !important;
@@ -104,31 +116,27 @@ class HideChannels {
         }
         
         /* How the button looks */
-        .theme-dark #toggleChannels.channelsVisible {
+        .theme-dark #${config.constants.buttonID}.${config.constants.buttonVisible} {
             background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
         }
-        .theme-dark #toggleChannels.channelsHidden {
+        .theme-dark #${config.constants.buttonID}.${config.constants.buttonHidden} {
             background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
         }
         /* In light theme */
-        .theme-light #toggleChannels.channelsVisible {
+        .theme-light #${config.constants.buttonID}.${config.constants.buttonVisible} {
             background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
         }
-        .theme-light #toggleChannels.channelsHidden {
+        .theme-light #${config.constants.buttonID}.${config.constants.buttonHidden} {
             background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
         }
         
         /* Attached CSS to sidebar */
-        .hideElement {
+        .${config.constants.hideElementsName} {
             width: 0 !important;
         }
         
         /* Set animations */
-        .${HideChannels.sidebarClass} {
-            transition: width 400ms ease;
-        }
-        /* Animations with element */
-        .${HideChannels.sidebarClass}.hideElement {
+        .${this.sidebarClass} {
             transition: width 400ms ease;
         }`);
         //Render the button and we're off to the races!
@@ -139,16 +147,16 @@ class HideChannels {
     renderButton() {
         //Create our button, and fetch it's home.
         let button = document.createElement('div'),
-            titleBar = document.querySelector(`.${HideChannels.channelHeaderClass}`);
+            titleBar = document.querySelector(`.${this.channelHeaderClass}`);
 
         //If there is no title bar, dump
         if (!titleBar)
             return;
         
         //Set ID for easy targeting.
-        button.setAttribute('id', HideChannels.buttonID);
+        button.setAttribute('id', config.constants.buttonID);
         //Set class according to the current visibility
-        button.setAttribute('class', HideChannels.channelsHiddenBool ? HideChannels.buttonHidden : HideChannels.buttonVisible);
+        button.setAttribute('class', this.channelsHiddenBool ? config.constants.buttonHidden : config.constants.buttonVisible);
         //Add our click event.
         button.addEventListener('click', () => this.toggleChannels());
 
@@ -160,43 +168,41 @@ class HideChannels {
     //Toggle McToggleson.
     toggleChannels() {
         //Get the button and sidebar
-        let button = document.getElementById(HideChannels.buttonID),
-            sidebar = document.querySelector(`.${HideChannels.sidebarClass}`)
+        let button = document.getElementById(config.constants.buttonID),
+            sidebar = document.querySelector(`.${this.sidebarClass}`)
 
         //If it is showing, we need to hide it.
-        if (!HideChannels.channelsHiddenBool) {
+        if (!this.channelsHiddenBool) {
             //Change class for CSS
-            button.setAttribute('class', HideChannels.buttonHidden);
+            button.setAttribute('class', config.constants.buttonHidden);
             //And add it to sidebar for the animation
-            sidebar.classList.add(HideChannels.hideElementsName);
+            sidebar.classList.add(config.constants.hideElementsName);
             //Also set the memory.
-            HideChannels.channelsHiddenBool = true;
+            this.channelsHiddenBool = true;
         }
         //If it is hidden, we need to show it.
         else {
-            button.setAttribute('class', HideChannels.buttonVisible);
-            sidebar.classList.remove(HideChannels.hideElementsName);
+            button.setAttribute('class', config.constants.buttonVisible);
+            sidebar.classList.remove(config.constants.hideElementsName);
 
-            HideChannels.channelsHiddenBool = false;
+            this.channelsHiddenBool = false;
         }
     }
 
     //Remove and cleanup
     stop() {
         //Our CSS
-        let HideChannelsStyle = document.getElementById("HideChannelsStyle");
-        if (HideChannelsStyle)
-            HideChannelsStyle.parentElement.removeChild(HideChannelsStyle);
+        BdApi.clearCSS(config.constants.cssStyle);
 
         //Our button
-        let button = document.getElementById(HideChannels.buttonID);
+        let button = document.getElementById(config.constants.buttonID);
         if (button)
             button.remove();
 
         //And if there are remnants of css left,
         //make sure we remove the class from the sidebar to ensure visual confirmation.
-        let sidebar = document.querySelector(`.${HideChannels.sidebarClass}`);
-        if (sidebar.classList.contains(HideChannels.hideElementsName))
-            sidebar.classList.remove(HideChannels.hideElementsName);
+        let sidebar = document.querySelector(`.${this.sidebarClass}`);
+        if (sidebar.classList.contains(config.constants.hideElementsName))
+            sidebar.classList.remove(config.constants.hideElementsName);
     }
 }
