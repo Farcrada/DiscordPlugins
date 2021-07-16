@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.5.4
+ * @version 3.6.0
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -10,11 +10,33 @@
  */
 
 
+const config = {
+    info: {
+        name: "Channel Permissions",
+        id: "ChannelPermissions",
+        description: "Hover over channels to view their required permissions.",
+        version: "3.6.0",
+        author: "Farcrada",
+        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
+    },
+    constants: {
+        //Our name scheme (I should really apply the lesson I learned with unique names)
+        cssStyle: "FarcradaTooltipCSS",
+        tooltipLeft: "FarcradaTooltipLeft",
+        tooltipLeftClosing: "FarcradaTooltipLeftClosing",
+        tooltipFadeIn: "FarcradaTooltipCSSFadeIn",
+        tooltipFadeOut: "FarcradaTooltipCSSFadeOut",
+        animationTime: 100,
+        colorAlpha: 0.6
+    }
+}
+
+
 class ChannelPermissions {
-    getName() { return "Channel Permissions"; }
-    getDescription() { return "Hover over channels to view their required permissions."; }
-    getVersion() { return "3.5.4"; }
-    getAuthor() { return "Farcrada"; }
+    getName() { return config.info.name; }
+    getDescription() { return config.info.description; }
+    getVersion() { return config.info.version; }
+    getAuthor() { return config.info.author; }
 
     start() {
         if (!global.ZeresPluginLibrary) {
@@ -34,7 +56,7 @@ class ChannelPermissions {
 
         //First try the updater
         try {
-            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js");
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
         }
         catch (err) {
             console.error(this.getName(), "Plugin Updater could not be reached, attempting to enable plugin.", err);
@@ -67,37 +89,67 @@ class ChannelPermissions {
     //If everything is ok; "after" start()
     initialize() {
         //Create and cache our class variables
-        createCache();
+        this.createCache();
 
-        checkRemoveCSS();
+        BdApi.clearCSS(config.constants.cssStyle);
 
-        BdApi.injectCSS("FarcradaTooltipCSS", `
-        @keyframes FarcradaTooltipCSSFadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-        }
-        
-        @keyframes FarcradaTooltipCSSFadeOut {
-            to {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-        }
-
-        .FarcradaTooltipLeft {
-            transform-origin: left center;
-            animation: FarcradaTooltipCSSFadeIn 0.1s;
-            width: 300px;
-        }
-        
-        .FarcradaTooltipLeftClosing {
-            transform-origin: left center;
-            animation: FarcradaTooltipCSSFadeOut 0.1s;
-            width: 300px;
-        }`);
+        BdApi.injectCSS(config.constants.cssStyle, `
+@keyframes ${config.constants.tooltipFadeIn} {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
     }
+}
+
+@keyframes ${config.constants.tooltipFadeOut} {
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+.${config.constants.tooltipLeft} {
+    transform-origin: left center;
+    animation: ${config.constants.tooltipFadeIn} ${config.constants.animationTime}ms;
+    width: 300px;
+}
+
+.${config.constants.tooltipLeftClosing} {
+    transform-origin: left center;
+    animation: ${config.constants.tooltipFadeOut} ${config.constants.animationTime}ms;
+    width: 300px;
+}`);
+    }
+
+    //Cache expensive `BdApi.findModule` calls.
+    createCache() {
+        //Lose/single classes
+        this.sidebarScroller = BdApi.findModuleByProps("positionedContainer", "unreadBar").scroller;
+        this.textarea = BdApi.findModuleByProps("textarea").textarea;
+        this.scrollbarGhostHairline = BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline;
+        this.listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
+
+        //Class collections
+        this.Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
+        this.RoleList = BdApi.findModuleByProps("rolesList");
+        this.layerClasses = BdApi.findModuleByProps("layer");
+        this.tooltipClasses = BdApi.findModuleByProps("tooltip");
+
+        //Stores
+        this.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
+        this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
+        this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
+
+        //Cache the function, makes it easier.
+        //We can't make these methods cleanly because that would make a `findModule` call.
+        this.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
+        this.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
+        this.getUser = BdApi.findModuleByProps("getUser", "getUsers").getUser;
+        //Store color converter (hex -> rgb) and d
+        this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
+    }
+
+    mouseoverFunc = (e) => this.createChannelPermissionsToolTip(e);
 
     //The scroller is loaded in every server switch.
     //This is beneficial because adding a listener on start-up causes a null issue.
@@ -116,31 +168,31 @@ class ChannelPermissions {
                 continue;
 
             //If it doesn't include what we search; next.
-            if (!node.innerHTML.includes(ChannelPermissions.sidebarScroller))
+            if (!node.innerHTML.includes(this.sidebarScroller))
                 continue;
 
             //If it got added; it got removed. We simply need to add our listener again.
-            document.querySelector(`.${ChannelPermissions.sidebarScroller}`).addEventListener('mouseover', this.createChannelPermissionsToolTip);
+            document.querySelector(`.${this.sidebarScroller}`).addEventListener('mouseover', this.mouseoverFunc);
         }
     }
 
     //On every switch we make sure that any trailing or bugging tooltips get removed.
     //This sometimes occurs when the tooltip gets/is shown when you collapse a category.
     onSwitch() {
-        let closingTooltips = document.querySelectorAll('.FarcradaTooltipLeftClosing')
+        let closingTooltips = document.querySelectorAll(`.${config.constants.tooltipLeftClosing}`)
         for (let i = 0; i < closingTooltips.length; i++)
             closingTooltips[i].remove();
 
-        let tooltips = document.querySelectorAll('.FarcradaTooltipLeft');
+        let tooltips = document.querySelectorAll(`.${config.constants.tooltipLeft}`);
         for (let i = 0; i < tooltips.length; i++)
             tooltips[i].remove();
     }
 
     stop() {
         //We also need to stop that activity if it's needed.
-        document.querySelector(`.${ChannelPermissions.sidebarScroller}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
+        document.querySelector(`.${this.sidebarScroller}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
 
-        checkRemoveCSS();
+        BdApi.clearCSS(config.constants.cssStyle);
     }
 
     createChannelPermissionsToolTip(e) {
@@ -152,381 +204,357 @@ class ChannelPermissions {
 
         //Check the internals and look for the Channel property which contains the channel's ID.
         let instance = BdApi.getInternalInstance(container);
-        let instanceChannel = findValue(instance, "channel");
+        let instanceChannel = this.findValue(instance, "channel");
 
         //This is what happens when consistency isn't upheld 
         if (!instanceChannel) {
             //Since the previous search was fruitless, we need to make it an object
             instanceChannel = {};
-            //Then search /RELIABLY/ for the channel ID and 
-            instanceChannel.id = findValue(instance, "data-list-item-id").replace(/[^0-9]/g, '');
+            //Then search /RELIABLY/ for the channel ID and fill the `id` property
+            instanceChannel.id = this.findValue(instance, "data-list-item-id").replace(/[^0-9]/g, '');
         }
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
 
-        let channel = ChannelPermissions.ChannelStore.getChannel(instanceChannel.id);
-        let guild = ChannelPermissions.getGuild(channel.guild_id);
+        let channel = this.ChannelStore.getChannel(instanceChannel.id);
+        let guild = this.getGuild(channel.guild_id);
 
         //Time to start the logic.
         //This returns the actual <div> which is made.
-        let contentHTML = constructToolTipContent(getRoles(guild, channel));
+        let contentHTML = this.constructToolTipContent(this.getRoles(guild, channel));
 
-        //Attach events to actually make it work.
-        container.onmouseenter = function () { toolTipOnMouseEnter(container, contentHTML); };
-        container.onmouseleave = toolTipOnMouseLeave;
+        //Attach events to actually make it work, we don't need to remove these events as the element is destroyed.
+        //we don't use `addEventListener` because it would simply stack. This replaces and will also take updates.
+        container.onmouseenter = (e) => this.toolTipOnMouseEnter(container, contentHTML);
+        container.onmouseleave = (e) => this.toolTipOnMouseLeave();
     }
-}
 
-//Cache expensive `BdApi.findModule` calls.
-function createCache() {
-    //Lose/single classes
-    ChannelPermissions.sidebarScroller = BdApi.findModuleByProps("positionedContainer", "unreadBar").scroller;
-    ChannelPermissions.textarea = BdApi.findModuleByProps("textarea").textarea;
-    ChannelPermissions.scrollbarGhostHairline = BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline;
-    ChannelPermissions.listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
+    //Construct the tooltip's content from the given roles.
+    constructToolTipContent(channelRolesAndTopic) {
+        //Destructure all the allowed roles from the specific channel
+        let { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic } = channelRolesAndTopic;
 
-    //Class collections
-    ChannelPermissions.Role = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
-    ChannelPermissions.RoleList = BdApi.findModuleByProps("rolesList");
-    ChannelPermissions.layerClasses = BdApi.findModuleByProps("layer");
-    ChannelPermissions.tooltipClasses = BdApi.findModuleByProps("tooltip");
+        //Set up variable for the HTML string we need to display in our tooltiptext.
+        let htmlString = `<div class = "${this.RoleList.bodyInnerWrapper}">`;
 
-    //Stores
-    ChannelPermissions.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
-    ChannelPermissions.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
-    ChannelPermissions.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
-
-    //Cache the function, makes it easier.
-    ChannelPermissions.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
-    ChannelPermissions.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
-    ChannelPermissions.getUser = BdApi.findModuleByProps("getUser", "getUsers").getUser;
-    //Store color converter (hex -> rgb) and d
-    ChannelPermissions.ColorConvert = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
-
-    //Globals
-    //Define global alpha.
-    ChannelPermissions.colorAlpha = 0.6;
-
-}
-
-//Check for exisitng CSS, and remove it.
-function checkRemoveCSS() {
-    let FarcradaTooltipCSS = document.querySelector('#FarcradaTooltipCSS');
-    if (FarcradaTooltipCSS)
-        FarcradaTooltipCSS.remove();
-}
-
-//Construct the tooltip's content from the given roles.
-function constructToolTipContent(channelRolesAndTopic) {
-    //Destructure all the allowed roles from the specific channel
-    let { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic } = channelRolesAndTopic;
-
-    //Set up variable for the HTML string we need to display in our tooltiptext.
-    let htmlString = `<div class = "${ChannelPermissions.RoleList.bodyInnerWrapper}">`;
-
-    //Start with the channel topic;
-    //Check if it has a topic and regex-replace any breakage with nothing.
-    if (topic && topic.replace(/[\t\n\r\s]/g, ""))
-        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
+        //Start with the channel topic;
+        //Check if it has a topic and regex-replace any breakage with nothing.
+        if (topic && topic.replace(/[\t\n\r\s]/g, ""))
+            htmlString += `<div class="${this.RoleList.bodyTitle}">
                         Topic:
                     </div>
-                    <div class="${ChannelPermissions.RoleList.note}">
-                        <div class="${ChannelPermissions.textarea} ${ChannelPermissions.scrollbarGhostHairline}" style="display:inline-block;">
+                    <div class="${this.RoleList.note}">
+                        <div class="${this.textarea} ${this.scrollbarGhostHairline}" style="display:inline-block;">
                             ${topic}
                         </div>
                     </div>`;
 
-    //The allowed roles, and thus the overwritten roles (those the user already has)
-    if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
-        //Title
-        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
+        //The allowed roles, and thus the overwritten roles (those the user already has)
+        if (allowedRoles.length > 0 || overwrittenRoles.length > 0) {
+            //Title
+            htmlString += `<div class="${this.RoleList.bodyTitle}">
                         Allowed Roles:
                     </div>
-                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
+                    <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
-        //Loop through the allowed roles
-        for (let role of allowedRoles) {
-            let color = role.colorString ? rgba2array(ChannelPermissions.ColorConvert(role.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
-            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            //Loop through the allowed roles
+            for (let role of allowedRoles) {
+                let color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+                htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div aria-hidden="true" class="${ChannelPermissions.Role.roleName}">
-                                ${encodeToHTML(role.name)}
+                            <div aria-hidden="true" class="${this.Role.roleName}">
+                                ${this.encodeToHTML(role.name)}
                             </div>
                         </div>`;
-        }
+            }
 
-        //Loop through the overwritten roles
-        for (let role of overwrittenRoles) {
-            let color = role.colorString ? rgba2array(ChannelPermissions.ColorConvert(role.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
-            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            //Loop through the overwritten roles
+            for (let role of overwrittenRoles) {
+                let color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+                htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div aria-hidden="true" class="${ChannelPermissions.Role.roleName}" style="text-decoration: line-through !important;">
-                                ${encodeToHTML(role.name)}
+                            <div aria-hidden="true" class="${this.Role.roleName}" style="text-decoration: line-through !important;">
+                                ${this.encodeToHTML(role.name)}
                             </div>
                         </div>`;
-        }
+            }
 
-        //End it with a /div.
-        htmlString += `</div>`;
-    }
-    //Check for allowed users
-    if (allowedUsers.length > 0) {
-        //Title
-        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
+            //End it with a /div.
+            htmlString += `</div>`;
+        }
+        //Check for allowed users
+        if (allowedUsers.length > 0) {
+            //Title
+            htmlString += `<div class="${this.RoleList.bodyTitle}">
                         Allowed Users:
                     </div>
-                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
+                    <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
-        //Loop throught it
-        for (let user of allowedUsers) {
-            let color = user.colorString ? ChannelPermissions.ColorConvert(user.colorString, ChannelPermissions.colorAlpha) : `rgba(255, 255, 255, ${ChannelPermissions.colorAlpha})`;
-            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: ${color};">
-                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: ${color};">
+            //Loop throught it
+            for (let user of allowedUsers) {
+                let color = user.colorString ? this.hex2rgb(user.colorString, config.constants.colorAlpha) : `rgba(255, 255, 255, ${config.constants.colorAlpha})`;
+                htmlString += `<div class="${this.Role.role}" style="border-color: ${color};">
+                            <div class="${this.Role.roleCircle}" style="background-color: ${color};">
                             </div>
-                            <div class="${ChannelPermissions.Role.roleName}">
-                                ${encodeToHTML(user.nick ? user.nick : user.name)}
+                            <div class="${this.Role.roleName}">
+                                ${this.encodeToHTML(user.nick ? user.nick : user.name)}
                             </div>
                         </div>`;
-        }
+            }
 
-        //End it.
-        htmlString += `</div>`;
-    }
-    //Check for denied roles
-    if (deniedRoles.length > 0) {
-        //Title
-        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
+            //End it.
+            htmlString += `</div>`;
+        }
+        //Check for denied roles
+        if (deniedRoles.length > 0) {
+            //Title
+            htmlString += `<div class="${this.RoleList.bodyTitle}">
                         Denied Roles:
                     </div>
-                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
+                    <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
-        //Loop throught it
-        for (let role of deniedRoles) {
-            let color = role.colorString ? rgba2array(ChannelPermissions.ColorConvert(role.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
-            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            //Loop throught it
+            for (let role of deniedRoles) {
+                let color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+                htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div class="${ChannelPermissions.Role.roleName}">
-                                ${encodeToHTML(role.name)}
+                            <div class="${this.Role.roleName}">
+                                ${this.encodeToHTML(role.name)}
                             </div>
                         </div>`;
-        }
+            }
 
-        //End it.
-        htmlString += `</div>`;
-    }
-    //Check for denied users
-    if (deniedUsers.length > 0) {
-        //Title
-        htmlString += `<div class="${ChannelPermissions.RoleList.bodyTitle}">
+            //End it.
+            htmlString += `</div>`;
+        }
+        //Check for denied users
+        if (deniedUsers.length > 0) {
+            //Title
+            htmlString += `<div class="${this.RoleList.bodyTitle}">
                         Denied Users:
                     </div>
-                    <div class="${ChannelPermissions.Role.root} ${ChannelPermissions.RoleList.rolesList} ${ChannelPermissions.RoleList.endBodySection}">`;
+                    <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
-        //Loop through it.
-        for (let user of deniedUsers) {
-            let color = user.colorString ? rgba2array(ChannelPermissions.ColorConvert(user.colorString, ChannelPermissions.colorAlpha)) : [255, 255, 255, ChannelPermissions.colorAlpha];
-            htmlString += `<div class="${ChannelPermissions.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
-                            <div class="${ChannelPermissions.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
+            //Loop through it.
+            for (let user of deniedUsers) {
+                let color = user.colorString ? this.rgba2array(this.hex2rgb(user.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+                htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
+                            <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
-                            <div class="${ChannelPermissions.Role.roleName}">
-                                ${encodeToHTML(user.nick ? user.nick : user.name)}
+                            <div class="${this.Role.roleName}">
+                                ${this.encodeToHTML(user.nick ? user.nick : user.name)}
                             </div>
                         </div>`;
-        }
+            }
 
-        //End it.
+            //End it.
+            htmlString += `</div>`;
+        }
         htmlString += `</div>`;
-    }
-    htmlString += `</div>`;
 
-    //If we have anything we need to create the tooltip.
-    if (htmlString)
-        //This'll daisychain return the constructed <span>
-        return htmlString;
-    else {
-        //And if it fucked up we got nothing.
-        return undefined;
-    }
-}
-
-//Get the roles of that channel
-function getRoles(guild, channel) {
-
-    let overrideTypes = Object.keys(ChannelPermissions.PermissionStore.PermissionOverrideType);
-
-    //Store yourself and create all the role sections.
-    let myMember = ChannelPermissions.getMember(guild.id, ChannelPermissions.CurrentUserStore.getCurrentUser().id);
-    let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
-    let everyoneDenied = false;
-
-    //Loop through all the permissions
-    for (let id in channel.permissionOverwrites) {
-        //Check if the current permission type is a role
-        if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE) &&
-            //And if it's not just @everyopne role
-            (guild.roles[id] && guild.roles[id].name != "@everyone") &&
-            //Check if it's an allowing permission
-            ((channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
-
-            //Stripe through those the user has
-            if (myMember.roles.includes(id))
-                overwrittenRoles.push(guild.roles[id]);
-            //And save the rest
-            else
-                allowedRoles.push(guild.roles[id]);
-        }
-        //Check if permission is for a single user instead of a role
-        else if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER) &&
-            //Check if it's an allowing permission
-            ((channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].allow || (channel.permissionOverwrites[id].allow | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].allow)) {
-
-            //Specific allowed users get added to their own section
-            let user = ChannelPermissions.getUser(id);
-            let member = ChannelPermissions.getMember(guild.id, id);
-
-            if (user && member)
-                allowedUsers.push(Object.assign({ name: user.username }, member));
-        }
-        //Same as the allowed but now for denied roles
-        if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.ROLE) &&
-            ((channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
-
-            //Specific everyone denied
-            deniedRoles.push(guild.roles[id]);
-
-            //If @everyone is denied set the variable to represent this.
-            if (guild.roles[id].name == "@everyone")
-                everyoneDenied = true;
-        }
-        //Same as the allowed but now for denied members
-        else if ((channel.permissionOverwrites[id].type == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER || overrideTypes[channel.permissionOverwrites[id].type] == ChannelPermissions.PermissionStore.PermissionOverrideType.MEMBER) &&
-            ((channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.VIEW_CHANNEL) == channel.permissionOverwrites[id].deny || (channel.permissionOverwrites[id].deny | ChannelPermissions.PermissionStore.Permissions.CONNECT) == channel.permissionOverwrites[id].deny)) {
-
-            //Specific denied users
-            let user = ChannelPermissions.getUser(id);
-            let member = ChannelPermissions.getMember(guild.id, id);
-
-            if (user && member)
-                deniedUsers.push(Object.assign({ name: user.username }, member));
+        //If we have anything we need to create the tooltip.
+        if (htmlString)
+            //This'll daisychain return the constructed <span>
+            return htmlString;
+        else {
+            //And if it fucked up we got nothing.
+            return undefined;
         }
     }
 
-    //The only logical assumption if @everyone isn't denied.
-    if (!everyoneDenied)
-        allowedRoles.push({ "name": "@everyone" });
+    //Get the roles of that channel
+    getRoles(guild, channel) {
 
-    //Apparently we can't pass this as is, so....
-    let topic = channel.topic;
+        let overrideTypes = Object.keys(this.PermissionStore.PermissionOverrideType);
+        //Store yourself and create all the role sections.
+        let myMember = this.getMember(guild.id, this.CurrentUserStore.getCurrentUser().id);
+        let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
+        let everyoneDenied = false;
 
-    //Now return the roles and topic from the channel to be destructured
-    return { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic };
-}
+        //So much text, lets improve readability.
+        let channelOW = channel.permissionOverwrites;
+        let permissionOverrideTypes = this.PermissionStore.PermissionOverrideType;
+        let permissionTypes = this.PermissionStore.Permissions;
 
-//Event for when the mouse enters the channel
-function toolTipOnMouseEnter(container, contentHTML) {
-    //Destroy other closing elements to make sure it doesn't look weird.
-    let closingTooltip = document.querySelector('.FarcradaTooltipLeftClosing')
-    if (closingTooltip)
-        closingTooltip.remove();
+        //Loop through all the permissions
+        for (let id in channelOW) {
+            //Check if the current permission type is a role
+            if ((channelOW[id].type == permissionOverrideTypes.ROLE ||
+                overrideTypes[channelOW[id].type] == permissionOverrideTypes.ROLE) &&
+                //And if it's not just @everyopne role
+                (guild.roles[id] && guild.roles[id].name != "@everyone") &&
+                //Check if it's an allowing permission via bitwise OR
+                ((channelOW[id].allow | permissionTypes.VIEW_CHANNEL) == channelOW[id].allow ||
+                    (channelOW[id].allow | permissionTypes.CONNECT) == channelOW[id].allow)) {
 
-    //The wrapper
-    let wrapper = document.createElement('div');
+                //Stripe through those the user has
+                if (myMember.roles.includes(id))
+                    overwrittenRoles.push(guild.roles[id]);
+                //And save the rest
+                else
+                    allowedRoles.push(guild.roles[id]);
+            }
+            //Check if permission is for a single user instead of a role
+            else if ((channelOW[id].type == permissionOverrideTypes.MEMBER ||
+                overrideTypes[channelOW[id].type] == permissionOverrideTypes.MEMBER) &&
+                //Check if it's an allowing permission via bitwise OR
+                ((channelOW[id].allow | permissionTypes.VIEW_CHANNEL) == channelOW[id].allow ||
+                    (channelOW[id].allow | permissionTypes.CONNECT) == channelOW[id].allow)) {
 
-    //Construct the tooltip.
-    wrapper.innerHTML = `<div class="${ChannelPermissions.layerClasses.layer} ${ChannelPermissions.layerClasses.disabledPointerEvents} FarcradaTooltipLeft">
-        <div class="${ChannelPermissions.tooltipClasses.tooltip} ${ChannelPermissions.tooltipClasses.tooltipRight} ${ChannelPermissions.tooltipClasses.tooltipPrimary} ${ChannelPermissions.tooltipClasses.tooltipDisablePointerEvents} ${ChannelPermissions.listItemTooltipClass}" style="white-space:normal !important;">
-            <div class="${ChannelPermissions.tooltipClasses.tooltipPointer}">
-            </div>
-            <div class="${ChannelPermissions.tooltipClasses.tooltipContent}">
-                ${contentHTML}
-            </div>
-        </div>
-    </div>`;
+                //Specific allowed users get added to their own section
+                let user = this.getUser(id);
+                let member = this.getMember(guild.id, id);
 
-    //This is so fkn scuffed. I need a better solution for this.
-    document.querySelector(`#app-mount > .${ChannelPermissions.layerClasses.layerContainer}`).appendChild(wrapper.firstChild);
-    //But oh well.
-    let tooltipElement = document.querySelector('.FarcradaTooltipLeft');
+                if (user && member)
+                    allowedUsers.push(Object.assign({ name: user.username }, member));
+            }
+            //Same as the allowed but now for denied roles
+            if ((channelOW[id].type == permissionOverrideTypes.ROLE ||
+                overrideTypes[channelOW[id].type] == permissionOverrideTypes.ROLE) &&
+                //Check if it's an denying permission via bitwise OR
+                ((channelOW[id].deny | permissionTypes.VIEW_CHANNEL) == channelOW[id].deny ||
+                    (channelOW[id].deny | permissionTypes.CONNECT) == channelOW[id].deny)) {
 
-    //Get the box centered and next to the channel.
-    let containerRight = parseInt(container.getBoundingClientRect().right);
-    let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5) - (tooltipElement.offsetHeight * 0.5);
-    tooltipElement.style = `position: absolute; top: ${containerTop.toString()}px; left: ${(containerRight + 10).toString()}px;`;
-}
+                //Specific everyone denied
+                deniedRoles.push(guild.roles[id]);
 
-//Event for when the mouse leaves the channel
-function toolTipOnMouseLeave() {
-    //Acquire the element, initiate the removal
-    let tooltip = document.querySelector('.FarcradaTooltipLeft')
-    if (tooltip)
-        tooltip.className = "FarcradaTooltipLeftClosing";
+                //If @everyone is denied set the variable to represent this.
+                if (guild.roles[id].name == "@everyone")
+                    everyoneDenied = true;
+            }
+            //Same as the allowed but now for denied users
+            else if ((channelOW[id].type == permissionOverrideTypes.MEMBER ||
+                overrideTypes[channelOW[id].type] == permissionOverrideTypes.MEMBER) &&
+                //Check if it's an denying permission via bitwise OR
+                ((channelOW[id].deny | permissionTypes.VIEW_CHANNEL) == channelOW[id].deny ||
+                    (channelOW[id].deny | permissionTypes.CONNECT) == channelOW[id].deny)) {
 
-    //If it has already been deleted, cancel, if not continue
-    setTimeout(function () {
-        let tooltipClosing = document.querySelector('.FarcradaTooltipLeftClosing');
+                //Specific denied users
+                let user = this.getUser(id);
+                let member = this.getMember(guild.id, id);
 
-        if (tooltipClosing)
-            tooltipClosing.remove();
-
-        return;
-    }, 100);
-}
-
-function findValue(instance, searchkey) {
-    //Where to search
-    var whitelist = {
-        memoizedProps: true,
-        child: true
-    };
-    //Where not to search
-    var blacklist = {
-        contextSection: true
-    };
-
-    return getKey(instance);
-
-    function getKey(instance) {
-        //In case the result is never filled, predefine it.
-        var result = undefined;
-        //Check if it exists
-        if (instance && !Node.prototype.isPrototypeOf(instance)) {
-            //Filter inherited properties
-            let keys = Object.getOwnPropertyNames(instance);
-            //As long as result is undefined and within keys.length; loop
-            for (let i = 0; result === undefined && i < keys.length; i++) {
-                let key = keys[i];
-
-                //Make sure the property's not blacklisted
-                if (key && !blacklist[key]) {
-                    var value = instance[key];
-
-                    //if this is the key we're looking for, return it
-                    if (searchkey === key)
-                        return value;
-
-                    //If it's an object or function and it is white
-                    else if ((typeof value === "object" || typeof value === "function") &&
-                        (whitelist[key] || key[0] == "." || !isNaN(key[0])))
-                        result = getKey(value);
-                }
+                if (user && member)
+                    deniedUsers.push(Object.assign({ name: user.username }, member));
             }
         }
-        return result;
+
+        //The only logical assumption if @everyone isn't denied.
+        if (!everyoneDenied)
+            allowedRoles.push({ "name": "@everyone" });
+
+        //Apparently we can't pass this as is, so....
+        let topic = channel.topic;
+
+        //Now return the roles and topic from the channel to be destructured
+        return { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic };
     }
-}
 
-function encodeToHTML(string) {
-    var ele = document.createElement("div");
-    ele.innerText = string;
-    return ele.innerHTML;
-}
+    //Event for when the mouse enters the channel
+    toolTipOnMouseEnter(container, contentHTML) {
+        //Destroy other closing elements to make sure it doesn't look weird.
+        let closingTooltip = document.querySelector(`.${config.constants.tooltipLeftClosing}`)
+        if (closingTooltip)
+            closingTooltip.remove();
 
-function rgba2array(rgba) {
-    //Expression gets everything betwween '[' and ']'.
-    let regExp = /\(([^)]+)\)/;
-    //[0] is with '[]', and [1] is without.
-    return regExp.exec(rgba)[1].split(',');
+        //The wrapper
+        let wrapper = document.createElement('div');
+
+        //Construct the tooltip.
+        wrapper.innerHTML = `<div class="${this.layerClasses.layer} ${this.layerClasses.disabledPointerEvents} ${config.constants.tooltipLeft}">
+    <div class="${this.tooltipClasses.tooltip} ${this.tooltipClasses.tooltipRight} ${this.tooltipClasses.tooltipPrimary} ${this.tooltipClasses.tooltipDisablePointerEvents} ${this.listItemTooltipClass}" style="white-space:normal !important;">
+        <div class="${this.tooltipClasses.tooltipPointer}">
+        </div>
+        <div class="${this.tooltipClasses.tooltipContent}">
+            ${contentHTML}
+        </div>
+    </div>
+</div>`;
+
+        //This is so fkn scuffed. I need a better solution for this.
+        document.querySelector(`#app-mount > .${this.layerClasses.layerContainer}`).appendChild(wrapper.firstChild);
+        //But oh well.
+        let tooltipElement = document.querySelector(`.${config.constants.tooltipLeft}`);
+
+        //Get the box centered and next to the channel.
+        let containerRight = parseInt(container.getBoundingClientRect().right);
+        let containerTop = parseInt(container.getBoundingClientRect().top) + (container.offsetHeight * 0.5) - (tooltipElement.offsetHeight * 0.5);
+        tooltipElement.style = `position: absolute; top: ${containerTop.toString()}px; left: ${(containerRight + 10).toString()}px;`;
+    }
+
+    //Event for when the mouse leaves the channel
+    toolTipOnMouseLeave() {
+        //Acquire the element, initiate the removal
+        let tooltip = document.querySelector(`.${config.constants.tooltipLeft}`)
+        if (tooltip)
+            tooltip.className = config.constants.tooltipLeftClosing;
+
+        //If it has already been deleted, cancel, if not continue
+        setTimeout(function () {
+            let tooltipClosing = document.querySelector(`.${config.constants.tooltipLeftClosing}`);
+
+            if (tooltipClosing)
+                tooltipClosing.remove();
+
+            return;
+        }, config.constants.animationTime);
+    }
+
+    encodeToHTML(string) {
+        var ele = document.createElement("div");
+        ele.innerText = string;
+        return ele.innerHTML;
+    }
+
+    rgba2array(rgba) {
+        //Expression gets everything between '[' and ']'.
+        let regExp = /\(([^)]+)\)/;
+        //[0] is with '[]' characters, and [1] is without.
+        return regExp.exec(rgba)[1].split(',');
+    }
+
+    findValue(instance, searchkey) {
+        //Where to search
+        var whitelist = {
+            memoizedProps: true,
+            child: true
+        };
+        //Where not to search
+        var blacklist = {
+            contextSection: true
+        };
+
+        return getKey(instance);
+
+        function getKey(instance) {
+            //In case the result is never filled, predefine it.
+            var result = undefined;
+            //Check if it exists
+            if (instance && !Node.prototype.isPrototypeOf(instance)) {
+                //Filter inherited properties
+                let keys = Object.getOwnPropertyNames(instance);
+                //As long as result is undefined and within keys.length; loop
+                for (let i = 0; result === undefined && i < keys.length; i++) {
+                    let key = keys[i];
+
+                    //Make sure the property's not blacklisted
+                    if (key && !blacklist[key]) {
+                        var value = instance[key];
+
+                        //if this is the key we're looking for, return it
+                        if (searchkey === key)
+                            return value;
+
+                        //If it's an object or function and it is white
+                        else if ((typeof value === "object" || typeof value === "function") &&
+                            (whitelist[key] || key[0] == "." || !isNaN(key[0])))
+                            result = getKey(value);
+                    }
+                }
+            }
+            return result;
+        }
+    }
 }
