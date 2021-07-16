@@ -1,20 +1,32 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.1.6
+ * @version 9.2.0
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
- * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Auto-Scale-Text-Area-Icons/AutoScaleTextAreaIcons.plugin.js
  */
 
 
+const config = {
+    info: {
+        name: "Double Click To Edit",
+        id: "DoubleClickToEdit",
+        description: "Double click a message you wrote to quickly edit it",
+        version: "9.2.0",
+        author: "Farcrada",
+        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Auto-Scale-Text-Area-Icons/AutoScaleTextAreaIcons.plugin.js"
+    }
+}
+
+
 class DoubleClickToEdit {
-    getName() { return "Double Click To edit"; }
-    getDescription() { return "Double click a message you wrote to quickly edit it"; }
-    getVersion() { return "9.1.6"; }
-    getAuthor() { return "Farcrada, original idea by Jiiks"; }
+    getName() { return config.info.name; }
+    getDescription() { return config.info.description; }
+    getVersion() { return config.info.version; }
+    getAuthor() { return `${config.info.author}, original idea by Jiiks`; }
 
     start() {
         if (!global.ZeresPluginLibrary) {
@@ -34,7 +46,7 @@ class DoubleClickToEdit {
 
         //First try the updater
         try {
-            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(this.getName(), this.getVersion(), "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js");
+            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
         }
         catch (err) {
             console.error(this.getName(), "Plugin Updater could not be reached.", err);
@@ -57,19 +69,21 @@ class DoubleClickToEdit {
 
     initialize() {
         //Classes
-        DoubleClickToEdit.selectedClass = BdApi.findModuleByProps("message", "selected").selected;
+        this.selectedClass = BdApi.findModuleByProps("message", "selected").selected;
 
         //Stores
-        DoubleClickToEdit.MessageStore = BdApi.findModuleByProps("receiveMessage", "editMessage");
-        DoubleClickToEdit.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
+        this.MessageStore = BdApi.findModuleByProps("receiveMessage", "editMessage");
+        this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
 
         //This we can do because the only way this fails is
         //if the entire instance is refreshed
-        document.addEventListener('dblclick', this.handler);
+        document.addEventListener('dblclick', this.doubleclickFunc);
     }
 
+    doubleclickFunc = (e) => this.handler(e);
+
     //Though we oughtta remove it when stopping
-    stop() { document.removeEventListener('dblclick', this.handler); }
+    stop() { document.removeEventListener('dblclick', this.doubleclickFunc); }
 
     handler(e) {
         //Target the message
@@ -79,7 +93,7 @@ class DoubleClickToEdit {
             return;
 
         //Make sure we're not resetting when the message is already in edit-mode.
-        if (messagediv.classList.contains(DoubleClickToEdit.selectedClass))
+        if (messagediv.classList.contains(this.selectedClass))
             return;
 
         //Basically make a HTMLElement/Node interactable with it's React components.
@@ -90,14 +104,14 @@ class DoubleClickToEdit {
 
         //This is filled with the message top to bottom,
         //if it has a quote the quote will be "message".
-        let message = getValueFromKey(instance, "message");
+        let message = this.getValueFromKey(instance, "message");
         //As a result, this will be the actual message you want to edit.
-        let baseMessage = getValueFromKey(instance, "baseMessage");
+        let baseMessage = this.getValueFromKey(instance, "baseMessage");
 
         //Check if the quote or standalone message is yours.
-        let msgYours = messageYours(message, DoubleClickToEdit.CurrentUserStore.getCurrentUser().id);
+        let msgYours = this.messageYours(message, this.CurrentUserStore.getCurrentUser().id);
         //If double clicked a message with a quote, check if the "base"-message is yours.
-        let baseMsgYours = messageYours(baseMessage, DoubleClickToEdit.CurrentUserStore.getCurrentUser().id);
+        let baseMsgYours = this.messageYours(baseMessage, this.CurrentUserStore.getCurrentUser().id);
 
         //Message(/quote) isn't yours
         if (!msgYours) {
@@ -118,60 +132,60 @@ class DoubleClickToEdit {
 
         //If anything was yours;
         //Execute order 66
-        DoubleClickToEdit.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
+        this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
     }
-}
 
-function messageYours(message, id) {
-    //If message is falsely
-    if (!message)
-        return undefined;
+    messageYours(message, id) {
+        //If message is falsely
+        if (!message)
+            return undefined;
 
-    //If it's us
-    if (message.author.id === id)
-        return true;
-    //But if it's not!
-    return false;
-}
+        //If it's us
+        if (message.author.id === id)
+            return true;
+        //But if it's not!
+        return false;
+    }
 
-function getValueFromKey(instance, searchkey) {
-    //Where we want to search.
-    let whitelist = {
-        memoizedProps: true,
-        child: true,
-        sibling: true
-    };
-    //Start our mayhem
-    return getKey(instance)
+    getValueFromKey(instance, searchkey) {
+        //Where we want to search.
+        let whitelist = {
+            memoizedProps: true,
+            child: true,
+            sibling: true
+        };
+        //Start our mayhem
+        return getKey(instance)
 
-    function getKey(instance) {
-        //Pre-define
-        let result = undefined;
-        //Make sure it exists and isn't a "paradox".
-        if (instance && !Node.prototype.isPrototypeOf(instance)) {
-            //Get our own keys
-            let keys = Object.getOwnPropertyNames(instance);
-            //As long as we don't have a result, lets go through.
-            for (let i = 0; result === undefined && i < keys.length; i++) {
-                //Store our key for readability
-                let key = keys[i];
-                //Check if there is a key
-                if (key) {
-                    //Store the value
-                    let value = instance[key];
-                    //Is our key what we want?
-                    if (searchkey === key)
-                        result = value;
-                    //Otherwise check if the value of a key is something we can search through
-                    //and whitelisted; of course.
-                    else if ((typeof value === "object" || typeof value === "function") &&
-                        (whitelist[key] || key[0] == "." || !isNaN(key[0])))
-                        //Lets go nesting; lets go!
-                        result = getKey(value);
+        function getKey(instance) {
+            //Pre-define
+            let result = undefined;
+            //Make sure it exists and isn't a "paradox".
+            if (instance && !Node.prototype.isPrototypeOf(instance)) {
+                //Get our own keys
+                let keys = Object.getOwnPropertyNames(instance);
+                //As long as we don't have a result, lets go through.
+                for (let i = 0; result === undefined && i < keys.length; i++) {
+                    //Store our key for readability
+                    let key = keys[i];
+                    //Check if there is a key
+                    if (key) {
+                        //Store the value
+                        let value = instance[key];
+                        //Is our key what we want?
+                        if (searchkey === key)
+                            result = value;
+                        //Otherwise check if the value of a key is something we can search through
+                        //and whitelisted; of course.
+                        else if ((typeof value === "object" || typeof value === "function") &&
+                            (whitelist[key] || key[0] == "." || !isNaN(key[0])))
+                            //Lets go nesting; lets go!
+                            result = getKey(value);
+                    }
                 }
             }
+            //If a poor sod got found this will not be `undefined`
+            return result;
         }
-        //If a poor sod got found this will not be `undefined`
-        return result;
     }
 }
