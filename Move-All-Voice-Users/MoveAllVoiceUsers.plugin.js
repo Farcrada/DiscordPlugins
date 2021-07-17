@@ -2,7 +2,7 @@
  * @name MoveAllVoiceUsers
  * @author Farcrada
  * @version 0.9.0
- * @description Moves all users in a partivular voice chat.
+ * @description Moves all users in a particular voice chat.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Move-All-Voice-Users/MoveAllVoiceUsers.plugin.js
@@ -14,7 +14,7 @@ const config = {
     info: {
         name: "Move All Voice Users",
         id: "MoveAllVoiceUsers",
-        description: "Moves all users in a partivular voice chat.",
+        description: "Moves all users in a particular voice chat.",
         version: "0.9.0",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Move-All-Voice-Users/MoveAllVoiceUsers.plugin.js"
