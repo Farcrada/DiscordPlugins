@@ -1,7 +1,7 @@
 /**
  * @name HideChatIcons
  * @author Farcrada
- * @version 1.3.1
+ * @version 1.3.2
  * @description Hides the chat icons behind a button.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Chat Icons",
         id: "HideChatIcons",
         description: "Hides the chat icons behind a button.",
-        version: "1.3.1",
+        version: "1.3.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
     },
@@ -188,19 +188,19 @@ class HideChatIcons {
     //Creation and appending our button, i.e. rendering.
     renderButton(startup) {
         //This only happens when we're starting/rerendering
-        if (startup) {
-            //As a precaution, we're going to remove the button
-            let button = document.getElementById(config.constants.buttonID)
-            if (button)
+        let button = document.getElementById(config.constants.buttonID);
+        if (button)
+            if (startup)
                 button.remove();
-        }
+            else
+                return;
 
         //Create our button, and fetch it's home.
-        let button = document.createElement('div'),
-            inner = document.querySelector(`.${this.buttonClasses.inner}`),
+        button = document.createElement('div');
+        let inner = document.querySelector(`.${this.buttonClasses.inner}`),
             icons = document.querySelector(`.${this.buttonClasses.buttons}`),
             parent = document.getElementById(config.constants.parentID);
-        
+
         //If there are no icons, exit
         if (!(inner && icons.firstChild))
             return;
