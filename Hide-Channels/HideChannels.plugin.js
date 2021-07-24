@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 1.2.0
+ * @version 1.2.1
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Hide Channels",
         id: "HideChannels",
         description: "Hide channel list from view.",
-        version: "1.2.0",
+        version: "1.2.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
     },
@@ -261,6 +261,8 @@ class HideChannels {
     //These could be statics, but looks scuffed.
     //Nullchecking
     checkKeybindLoad(keybindSetting) {
+        if (!keybindSetting)
+            return [[0, 162], [0, 72]];
         for (const keybind of keybindSetting) {
             if (Array.isArray(keybind)) {
                 for (const key of keybind)
