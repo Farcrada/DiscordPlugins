@@ -31,8 +31,14 @@ body:
     description: If applicable, add screenshots to help explain your problem.
 - type: input
   attributes:
-    label: Discord and OS version
-    description: Stable, Canary, PTB; Linux, Windows, macOS
+    label: Discord version
+    description: Stable, Canary, PTB
+  validations:
+    required: true
+- type: input
+  attributes:
+    label: OS version
+    description: Linux (distro), macOS, Windows (7, 8, 9, 10)
   validations:
     required: true
 - type: textarea
