@@ -1,0 +1,31 @@
+name: Feature Request
+description: Suggest an idea for a plugin or an entirely new one!
+title: "[plugin name] short description "
+labels: enhancement
+assignees:
+  - Farcrada
+body:
+  - type: textarea
+    attributes:
+      label: Is your request related to a problem? Please describe.
+      description: A clear and concise description of what the problem is.
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you'd like to see happen.
+      placeholder: Me not being frustrated anymore
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+      placeholder: Not required, but helpful.
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots about the feature request you have.
+      placeholder: Not required, but helpful.
