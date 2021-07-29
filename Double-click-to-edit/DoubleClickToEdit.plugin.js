@@ -1,7 +1,7 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.2.1
+ * @version 9.2.2
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
@@ -15,7 +15,7 @@
         name: "Double Click To Edit",
         id: "DoubleClickToEdit",
         description: "Double click a message you wrote to quickly edit it",
-        version: "9.2.1",
+        version: "9.2.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
     }
