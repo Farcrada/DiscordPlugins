@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.6.0
+ * @version 3.6.3
  * @description Hover over channels to view their required permissions.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Channel Permissions",
         id: "ChannelPermissions",
         description: "Hover over channels to view their required permissions.",
-        version: "3.6.0",
+        version: "3.6.3",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
     },
@@ -136,13 +136,13 @@ class ChannelPermissions {
         this.tooltipClasses = BdApi.findModuleByProps("tooltip");
 
         //Stores
-        this.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
         this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
         this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
 
         //Cache the function, makes it easier.
         //We can't make these methods cleanly because that would make a `findModule` call.
         this.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
+        this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
         this.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
         this.getUser = BdApi.findModuleByProps("getUser", "getUsers").getUser;
         //Store color converter (hex -> rgb) and d
@@ -216,8 +216,12 @@ class ChannelPermissions {
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
 
-        let channel = this.ChannelStore.getChannel(instanceChannel.id);
+        let channel = this.getChannel(instanceChannel.id);
         let guild = this.getGuild(channel.guild_id);
+
+        //Get the permissions of the parent, because permissions aren't inherited.
+        if (channel.isThread())
+            channel = this.getChannel(channel.parent_id);
 
         //Time to start the logic.
         //This returns the actual <div> which is made.
