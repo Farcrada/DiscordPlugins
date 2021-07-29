@@ -1,23 +1,23 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.2.0
+ * @version 9.2.1
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
- * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Auto-Scale-Text-Area-Icons/AutoScaleTextAreaIcons.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
  */
 
 
-const config = {
+ const config = {
     info: {
         name: "Double Click To Edit",
         id: "DoubleClickToEdit",
         description: "Double click a message you wrote to quickly edit it",
-        version: "9.2.0",
+        version: "9.2.1",
         author: "Farcrada",
-        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Auto-Scale-Text-Area-Icons/AutoScaleTextAreaIcons.plugin.js"
+        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
     }
 }
 
@@ -91,7 +91,6 @@ class DoubleClickToEdit {
         //If it finds nothing, null it.
         if (!messagediv)
             return;
-
         //Make sure we're not resetting when the message is already in edit-mode.
         if (messagediv.classList.contains(this.selectedClass))
             return;
@@ -101,6 +100,7 @@ class DoubleClickToEdit {
         //Mandatory nullcheck
         if (!instance)
             return;
+
 
         //This is filled with the message top to bottom,
         //if it has a quote the quote will be "message".
