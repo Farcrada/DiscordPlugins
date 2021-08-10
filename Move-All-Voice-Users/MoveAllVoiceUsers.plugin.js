@@ -1,7 +1,7 @@
 /**
  * @name MoveAllVoiceUsers
  * @author Farcrada
- * @version 0.9.1
+ * @version 0.9.2
  * @description Moves all users in a particular voice chat.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Move All Voice Users",
         id: "MoveAllVoiceUsers",
         description: "Moves all users in a particular voice chat.",
-        version: "0.9.1",
+        version: "0.9.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Move-All-Voice-Users/MoveAllVoiceUsers.plugin.js"
     }
@@ -125,11 +125,10 @@ class MoveAllVoiceUsers {
         if (channelOrUser)
             //Since the position of 
             for (let mainChild of returnValue.props.children) {
-                if (mainChild.props)
-                    if (mainChild.props.children)
-                        for (const child of mainChild.props.children)
-                            if (child?.props?.id === "hide-voice-names")
-                                mainChild.props.children.push(this.renderElement(channel, curChannelData));
+                if (mainChild.props?.children?.length > 0)
+                    for (const child of mainChild.props.children)
+                        if (child?.props?.id === "hide-voice-names")
+                            mainChild.props.children.push(this.renderElement(channel, curChannelData));
             }
         //Then it's a user
         else
