@@ -1,7 +1,7 @@
 /**
  * @name MoveAllVoiceUsers
  * @author Farcrada
- * @version 0.9.0
+ * @version 0.9.1
  * @description Moves all users in a particular voice chat.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
         name: "Move All Voice Users",
         id: "MoveAllVoiceUsers",
         description: "Moves all users in a particular voice chat.",
-        version: "0.9.0",
+        version: "0.9.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Move-All-Voice-Users/MoveAllVoiceUsers.plugin.js"
     }
@@ -123,10 +123,17 @@ class MoveAllVoiceUsers {
 
         //Is it a channel?
         if (channelOrUser)
-            returnValue.props.children[1].props.children.push(this.renderElement(channel, curChannelData, this.ContextControls.MenuGroup));
+            //Since the position of 
+            for (let mainChild of returnValue.props.children) {
+                if (mainChild.props)
+                    if (mainChild.props.children)
+                        for (const child of mainChild.props.children)
+                            if (child?.props?.id === "hide-voice-names")
+                                mainChild.props.children.push(this.renderElement(channel, curChannelData));
+            }
         //Then it's a user
         else
-            //                The element   |context sections |items in the section
+            //                The element    |context sections |items in the section
             returnValue.props.children.props.children[6].props.children.push(this.renderElement(channel, curChannelData));
     }
 
@@ -160,10 +167,6 @@ class MoveAllVoiceUsers {
 
         //If nothing; null
         return null;
-    }
-
-    renderelement(channel, curChannelData, group) {
-        return this.ce(group, null, renderElement(channel, curChannelData));
     }
 
     renderElement(channel, curChannelData) {
