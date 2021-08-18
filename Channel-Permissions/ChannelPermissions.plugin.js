@@ -1,9 +1,10 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.6.3
+ * @version 3.7.0
  * @description Hover over channels to view their required permissions.
  * 
+ * @invite qH6UWCwfTu
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Channel-Permissions/ChannelPermissions.plugin.js
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js
@@ -15,7 +16,7 @@ const config = {
         name: "Channel Permissions",
         id: "ChannelPermissions",
         description: "Hover over channels to view their required permissions.",
-        version: "3.6.3",
+        version: "3.7.0",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
     },
@@ -33,10 +34,8 @@ const config = {
 
 
 class ChannelPermissions {
+    //I like my spaces. 
     getName() { return config.info.name; }
-    getDescription() { return config.info.description; }
-    getVersion() { return config.info.version; }
-    getAuthor() { return config.info.author; }
 
     start() {
         if (!global.ZeresPluginLibrary) {
@@ -137,14 +136,17 @@ class ChannelPermissions {
 
         //Stores
         this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
-        this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
+        this.StringStore = BdApi.findModuleByProps("Messages").Messages;
 
         //Cache the function, makes it easier.
         //We can't make these methods cleanly because that would make a `findModule` call.
         this.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
         this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
         this.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
-        this.getUser = BdApi.findModuleByProps("getUser", "getUsers").getUser;
+        //Set local store and get the functions we need.
+        const UserStore = BdApi.findModuleByProps("getUser", "getUsers");
+        this.getUser = UserStore.getUser;
+        this.getCurrentUser = UserStore.getCurrentUser;
         //Store color converter (hex -> rgb) and d
         this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
     }
@@ -179,11 +181,11 @@ class ChannelPermissions {
     //On every switch we make sure that any trailing or bugging tooltips get removed.
     //This sometimes occurs when the tooltip gets/is shown when you collapse a category.
     onSwitch() {
-        let closingTooltips = document.querySelectorAll(`.${config.constants.tooltipLeftClosing}`)
+        let closingTooltips = document.querySelectorAll(`.${config.constants.tooltipLeftClosing}`),
+            tooltips = document.querySelectorAll(`.${config.constants.tooltipLeft}`);
+
         for (let i = 0; i < closingTooltips.length; i++)
             closingTooltips[i].remove();
-
-        let tooltips = document.querySelectorAll(`.${config.constants.tooltipLeft}`);
         for (let i = 0; i < tooltips.length; i++)
             tooltips[i].remove();
     }
@@ -203,8 +205,8 @@ class ChannelPermissions {
             return;
 
         //Check the internals and look for the Channel property which contains the channel's ID.
-        let instance = BdApi.getInternalInstance(container);
-        let instanceChannel = this.findValue(instance, "channel");
+        let instance = BdApi.getInternalInstance(container),
+            instanceChannel = this.findValue(instance, "channel");
 
         //This is what happens when consistency isn't upheld 
         if (!instanceChannel) {
@@ -216,8 +218,8 @@ class ChannelPermissions {
 
         //Once found we need the guild_id (server id) derrived from the channel hovered over
 
-        let channel = this.getChannel(instanceChannel.id);
-        let guild = this.getGuild(channel.guild_id);
+        let channel = this.getChannel(instanceChannel.id),
+            guild = this.getGuild(channel.guild_id);
 
         //Get the permissions of the parent, because permissions aren't inherited.
         if (channel.isThread())
@@ -233,13 +235,28 @@ class ChannelPermissions {
         container.onmouseleave = (e) => this.toolTipOnMouseLeave();
     }
 
-    //Construct the tooltip's content from the given roles.
+    //Construct the tooltip's content from the given roles
     constructToolTipContent(channelRolesAndTopic) {
         //Destructure all the allowed roles from the specific channel
-        let { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic } = channelRolesAndTopic;
+        const { allowedRoles,
+            allowedUsers,
+            overwrittenRoles,
+            deniedRoles,
+            deniedUsers,
+            topic,
+            categorySynced } = channelRolesAndTopic;
 
         //Set up variable for the HTML string we need to display in our tooltiptext.
         let htmlString = `<div class = "${this.RoleList.bodyInnerWrapper}">`;
+
+        //Check if the permissions of the channel are synced with the category
+        //If at all present, that is; We need to check it's type because null/undefined is not a boolean.
+        if (typeof (categorySynced) === "boolean")
+            htmlString += `<div class="${this.RoleList.note}">
+                        <div class="${this.textarea} ${this.scrollbarGhostHairline}" style="display:inline-block;">
+                            ${categorySynced ? "S" : "Not s"}ynced to category
+                        </div>
+                    </div>`;
 
         //Start with the channel topic;
         //Check if it has a topic and regex-replace any breakage with nothing.
@@ -262,8 +279,8 @@ class ChannelPermissions {
                     <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
             //Loop through the allowed roles
-            for (let role of allowedRoles) {
-                let color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+            for (const role of allowedRoles) {
+                const color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
                 htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -274,8 +291,8 @@ class ChannelPermissions {
             }
 
             //Loop through the overwritten roles
-            for (let role of overwrittenRoles) {
-                let color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+            for (const role of overwrittenRoles) {
+                const color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
                 htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -297,8 +314,8 @@ class ChannelPermissions {
                     <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
             //Loop throught it
-            for (let user of allowedUsers) {
-                let color = user.colorString ? this.hex2rgb(user.colorString, config.constants.colorAlpha) : `rgba(255, 255, 255, ${config.constants.colorAlpha})`;
+            for (const user of allowedUsers) {
+                const color = user.colorString ? this.hex2rgb(user.colorString, config.constants.colorAlpha) : `rgba(255, 255, 255, ${config.constants.colorAlpha})`;
                 htmlString += `<div class="${this.Role.role}" style="border-color: ${color};">
                             <div class="${this.Role.roleCircle}" style="background-color: ${color};">
                             </div>
@@ -320,8 +337,8 @@ class ChannelPermissions {
                     <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
             //Loop throught it
-            for (let role of deniedRoles) {
-                let color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+            for (const role of deniedRoles) {
+                const color = role.colorString ? this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
                 htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -343,8 +360,8 @@ class ChannelPermissions {
                     <div class="${this.Role.root} ${this.RoleList.rolesList} ${this.RoleList.endBodySection}">`;
 
             //Loop through it.
-            for (let user of deniedUsers) {
-                let color = user.colorString ? this.rgba2array(this.hex2rgb(user.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
+            for (const user of deniedUsers) {
+                const color = user.colorString ? this.rgba2array(this.hex2rgb(user.colorString, config.constants.colorAlpha)) : [255, 255, 255, config.constants.colorAlpha];
                 htmlString += `<div class="${this.Role.role}" style="border-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">
                             <div class="${this.Role.roleCircle}" style="background-color: rgb(${color[0]}, ${color[1]}, ${color[2]});">
                             </div>
@@ -369,79 +386,71 @@ class ChannelPermissions {
         }
     }
 
-    //Get the roles of that channel
+    //Get the roles of the channel
     getRoles(guild, channel) {
-
-        let overrideTypes = Object.keys(this.PermissionStore.PermissionOverrideType);
-        //Store yourself and create all the role sections.
-        let myMember = this.getMember(guild.id, this.CurrentUserStore.getCurrentUser().id);
-        let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [];
-        let everyoneDenied = false;
+        //A place to store all the results
+        let allowedRoles = [], allowedUsers = [], overwrittenRoles = [], deniedRoles = [], deniedUsers = [],
+            everyoneDenied = false;
 
         //So much text, lets improve readability.
-        let channelOW = channel.permissionOverwrites;
-        let permissionOverrideTypes = this.PermissionStore.PermissionOverrideType;
-        let permissionTypes = this.PermissionStore.Permissions;
+        const channelOW = channel.permissionOverwrites,
+            //Permission overrides
+            permissionOverrideTypes = this.PermissionStore.PermissionOverrideType,
+            //Permissions
+            permissionTypes = this.PermissionStore.Permissions,
+            //Store yourself
+            myMember = this.getMember(guild.id, this.getCurrentUser().id),
+            //Get the override types (array of two; ROLE and MEMBER)
+            overrideTypes = Object.keys(this.PermissionStore.PermissionOverrideType);
 
-        //Loop through all the permissions
-        for (let id in channelOW) {
+        //Loop through all the permissions by key
+        for (const roleID in channelOW) {
+            //Check if it's an ALLOWING permission via bitwise OR
+            const allowedPermission = (channelOW[roleID].allow | permissionTypes.VIEW_CHANNEL) === channelOW[roleID].allow ||
+                //For viewing or connecting
+                (channelOW[roleID].allow | permissionTypes.CONNECT) === channelOW[roleID].allow,
+                //Check if it's an DENYING permission via bitwise OR
+                deniedPermission = (channelOW[roleID].deny | permissionTypes.VIEW_CHANNEL) === channelOW[roleID].deny ||
+                    //For viewing or connecting
+                    (channelOW[roleID].deny | permissionTypes.CONNECT) === channelOW[roleID].deny,
+                //Check the type of permission
+                permissionRole = channelOW[roleID].type === permissionOverrideTypes.ROLE ||
+                    overrideTypes[channelOW[roleID].type] === permissionOverrideTypes.ROLE,
+                //Same but for a single member.
+                permissionMember = channelOW[roleID].type === permissionOverrideTypes.MEMBER ||
+                    overrideTypes[channelOW[roleID].type] === permissionOverrideTypes.MEMBER;
+
             //Check if the current permission type is a role
-            if ((channelOW[id].type == permissionOverrideTypes.ROLE ||
-                overrideTypes[channelOW[id].type] == permissionOverrideTypes.ROLE) &&
-                //And if it's not just @everyopne role
-                (guild.roles[id] && guild.roles[id].name != "@everyone") &&
-                //Check if it's an allowing permission via bitwise OR
-                ((channelOW[id].allow | permissionTypes.VIEW_CHANNEL) == channelOW[id].allow ||
-                    (channelOW[id].allow | permissionTypes.CONNECT) == channelOW[id].allow)) {
-
-                //Stripe through those the user has
-                if (myMember.roles.includes(id))
-                    overwrittenRoles.push(guild.roles[id]);
-                //And save the rest
-                else
-                    allowedRoles.push(guild.roles[id]);
+            if (permissionRole) {
+                if (allowedPermission) {
+                    //And if it's not just @everyone role
+                    if (guild.roles[roleID] && guild.roles[roleID].name !== "@everyone")
+                        //Stripe through those the user has
+                        if (myMember.roles.includes(roleID))
+                            overwrittenRoles.push(guild.roles[roleID]);
+                        //And save the rest
+                        else
+                            allowedRoles.push(guild.roles[roleID]);
+                }
+                else if (deniedPermission) {
+                    //If @everyone is denied set the variable to represent this.
+                    if (guild.roles[roleID] && guild.roles[roleID].name === "@everyone")
+                        //Specific everyone denied
+                        everyoneDenied = true;
+                    deniedRoles.push(guild.roles[roleID]);
+                }
             }
             //Check if permission is for a single user instead of a role
-            else if ((channelOW[id].type == permissionOverrideTypes.MEMBER ||
-                overrideTypes[channelOW[id].type] == permissionOverrideTypes.MEMBER) &&
-                //Check if it's an allowing permission via bitwise OR
-                ((channelOW[id].allow | permissionTypes.VIEW_CHANNEL) == channelOW[id].allow ||
-                    (channelOW[id].allow | permissionTypes.CONNECT) == channelOW[id].allow)) {
-
+            else if (permissionMember) {
                 //Specific allowed users get added to their own section
-                let user = this.getUser(id);
-                let member = this.getMember(guild.id, id);
+                const user = this.getUser(roleID),
+                    member = this.getMember(guild.id, roleID);
 
                 if (user && member)
-                    allowedUsers.push(Object.assign({ name: user.username }, member));
-            }
-            //Same as the allowed but now for denied roles
-            if ((channelOW[id].type == permissionOverrideTypes.ROLE ||
-                overrideTypes[channelOW[id].type] == permissionOverrideTypes.ROLE) &&
-                //Check if it's an denying permission via bitwise OR
-                ((channelOW[id].deny | permissionTypes.VIEW_CHANNEL) == channelOW[id].deny ||
-                    (channelOW[id].deny | permissionTypes.CONNECT) == channelOW[id].deny)) {
-
-                //Specific everyone denied
-                deniedRoles.push(guild.roles[id]);
-
-                //If @everyone is denied set the variable to represent this.
-                if (guild.roles[id].name == "@everyone")
-                    everyoneDenied = true;
-            }
-            //Same as the allowed but now for denied users
-            else if ((channelOW[id].type == permissionOverrideTypes.MEMBER ||
-                overrideTypes[channelOW[id].type] == permissionOverrideTypes.MEMBER) &&
-                //Check if it's an denying permission via bitwise OR
-                ((channelOW[id].deny | permissionTypes.VIEW_CHANNEL) == channelOW[id].deny ||
-                    (channelOW[id].deny | permissionTypes.CONNECT) == channelOW[id].deny)) {
-
-                //Specific denied users
-                let user = this.getUser(id);
-                let member = this.getMember(guild.id, id);
-
-                if (user && member)
-                    deniedUsers.push(Object.assign({ name: user.username }, member));
+                    if (allowedPermission)
+                        allowedUsers.push(Object.assign({ name: user.username }, member));
+                    else if (deniedPermission)
+                        deniedUsers.push(Object.assign({ name: user.username }, member));
             }
         }
 
@@ -449,11 +458,63 @@ class ChannelPermissions {
         if (!everyoneDenied)
             allowedRoles.push({ "name": "@everyone" });
 
-        //Apparently we can't pass this as is, so....
-        let topic = channel.topic;
+        const channelRoleObject = { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers }
 
-        //Now return the roles and topic from the channel to be destructured
-        return { allowedRoles, allowedUsers, overwrittenRoles, deniedRoles, deniedUsers, topic };
+
+        //A category doesn't have a topic so we can simply return as is.
+        if (channel.isCategory())
+            return channelRoleObject;
+        else {
+            //Check if the channel is part of a category
+            if (!channel.parent_id)
+                //if not, simply return with a topic
+                return Object.assign(channelRoleObject, { topic: channel.topic });
+
+            const curCategoryPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id)),
+                curChannelPerms = this.getPermissionsOfChannel(channel),
+                //Check and /objectify/ if the two are the same
+                categorySynced = {
+                    categorySynced: JSON.stringify(curCategoryPerms) === JSON.stringify(curChannelPerms)
+                };
+
+            //Return with topic and sync property
+            return Object.assign(channelRoleObject, { topic: channel.topic }, categorySynced, categorySyncDifference);
+        }
+    }
+
+    //Get all the permissions of a channel and if they're allwoing or not
+    getPermissionsOfChannel(channel) {
+        //Store the overwrites of the channel
+        const channelOW = channel.permissionOverwrites,
+            //Get Discord's permissions
+            permissionTypes = this.PermissionStore.Permissions;
+
+        //Define our return object
+        let permissionObject = {};
+
+        //Loop through all the permissions by key
+        for (const roleID in channelOW) {
+            for (const permType in permissionTypes) {
+                //Check if the permission is allowed via bitwise AND
+                const permAllowed = (channelOW[roleID].allow & permissionTypes[permType]) === permissionTypes[permType],
+                    //Check if the permission is denied via bitwise AND
+                    permDenied = (channelOW[roleID].deny & permissionTypes[permType]) === permissionTypes[permType];
+
+                //The predefining too early generates undesirable results.
+                if ((permAllowed || permDenied) && !permissionObject[roleID]) {
+                    permissionObject[roleID] = {};
+                    permissionObject[roleID].name = this.getGuild(channel.guild_id).roles[roleID]?.name;
+                }
+
+                //Sort the types between allowed and denied
+                if (permAllowed)
+                    permissionObject[roleID][permType] = true;
+                if (permDenied)
+                    permissionObject[roleID][permType] = false;
+            }
+        }
+        //Return our findings
+        return permissionObject;
     }
 
     //Event for when the mouse enters the channel
@@ -553,7 +614,7 @@ class ChannelPermissions {
 
                         //If it's an object or function and it is white
                         else if ((typeof value === "object" || typeof value === "function") &&
-                            (whitelist[key] || key[0] == "." || !isNaN(key[0])))
+                            (whitelist[key] || key[0] === "." || !isNaN(key[0])))
                             result = getKey(value);
                     }
                 }
