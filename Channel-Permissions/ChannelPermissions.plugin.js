@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.7.0
+ * @version 3.7.1
  * @description Hover over channels to view their required permissions.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
         name: "Channel Permissions",
         id: "ChannelPermissions",
         description: "Hover over channels to view their required permissions.",
-        version: "3.7.0",
+        version: "3.7.1",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
     },
@@ -478,7 +478,7 @@ class ChannelPermissions {
                 };
 
             //Return with topic and sync property
-            return Object.assign(channelRoleObject, { topic: channel.topic }, categorySynced, categorySyncDifference);
+            return Object.assign(channelRoleObject, { topic: channel.topic }, categorySynced);
         }
     }
 
