@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.7.1
+ * @version 3.7.2
  * @description Hover over channels to view their required permissions.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
         name: "Channel Permissions",
         id: "ChannelPermissions",
         description: "Hover over channels to view their required permissions.",
-        version: "3.7.1",
+        version: "3.7.2",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
     },
@@ -401,18 +401,19 @@ class ChannelPermissions {
             //Store yourself
             myMember = this.getMember(guild.id, this.getCurrentUser().id),
             //Get the override types (array of two; ROLE and MEMBER)
-            overrideTypes = Object.keys(this.PermissionStore.PermissionOverrideType);
+            overrideTypes = Object.keys(permissionOverrideTypes);
+
 
         //Loop through all the permissions by key
         for (const roleID in channelOW) {
             //Check if it's an ALLOWING permission via bitwise OR
-            const allowedPermission = (channelOW[roleID].allow | permissionTypes.VIEW_CHANNEL) === channelOW[roleID].allow ||
+            const allowedPermission = (channelOW[roleID].allow.data | permissionTypes.VIEW_CHANNEL.data) === channelOW[roleID].allow.data ||
                 //For viewing or connecting
-                (channelOW[roleID].allow | permissionTypes.CONNECT) === channelOW[roleID].allow,
+                (channelOW[roleID].allow.data | permissionTypes.CONNECT.data) === channelOW[roleID].allow.data,
                 //Check if it's an DENYING permission via bitwise OR
-                deniedPermission = (channelOW[roleID].deny | permissionTypes.VIEW_CHANNEL) === channelOW[roleID].deny ||
+                deniedPermission = (channelOW[roleID].deny.data | permissionTypes.VIEW_CHANNEL.data) === channelOW[roleID].deny.data ||
                     //For viewing or connecting
-                    (channelOW[roleID].deny | permissionTypes.CONNECT) === channelOW[roleID].deny,
+                    (channelOW[roleID].deny.data | permissionTypes.CONNECT.data) === channelOW[roleID].deny,
                 //Check the type of permission
                 permissionRole = channelOW[roleID].type === permissionOverrideTypes.ROLE ||
                     overrideTypes[channelOW[roleID].type] === permissionOverrideTypes.ROLE,
@@ -496,9 +497,9 @@ class ChannelPermissions {
         for (const roleID in channelOW) {
             for (const permType in permissionTypes) {
                 //Check if the permission is allowed via bitwise AND
-                const permAllowed = (channelOW[roleID].allow & permissionTypes[permType]) === permissionTypes[permType],
+                const permAllowed = (channelOW[roleID].allow.data & permissionTypes[permType].data) === permissionTypes[permType].data,
                     //Check if the permission is denied via bitwise AND
-                    permDenied = (channelOW[roleID].deny & permissionTypes[permType]) === permissionTypes[permType];
+                    permDenied = (channelOW[roleID].deny.data & permissionTypes[permType].data) === permissionTypes[permType].data;
 
                 //The predefining too early generates undesirable results.
                 if ((permAllowed || permDenied) && !permissionObject[roleID]) {
