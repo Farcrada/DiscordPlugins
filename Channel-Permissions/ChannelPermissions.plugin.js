@@ -26,6 +26,7 @@ const config = {
 	},
 	constants: {
 		cssStyle: "ChannelPermissionsCSSStyle",
+		textPopoutClass: "FarcradaTextPopoutClass",
 		channelTooltipClass: "FarcradaChannelTooltipClass",
 		syncClass: "FarcradaSyncClass",
 		topicClass: "FarcradaTopicClass",
@@ -90,46 +91,38 @@ class ChannelPermissions {
 	initialize() {
 		//Inject our styles
 		BdApi.injectCSS(config.constants.cssStyle, `
+.${config.constants.textPopoutClass} {
+	padding: 0 4px;
+}
 .${config.constants.channelTooltipClass} {
 	color: var(--interactive-active);
-	margin-top: 8px;
 }
-
 .${config.constants.syncClass} {
 	display: inline-block;
-	font-size: 9px;
+	font-size: 10px;
 	margin-bottom: 6px;
 }
-
 .${config.constants.topicClass} {
 	display: inline-block;
+	overflow-wrap: anywhere;
 	font-size: 12px;
 	margin-bottom: 10px;
 }`);
 		//Create and cache expensive `BdApi.findModule` calls.
 
 		//Lose/single classes
-		this.sidebarScroller = BdApi.findModuleByProps("positionedContainer", "unreadBar").scroller;
-		this.textarea = BdApi.findModuleByProps("textarea").textarea;
-		this.scrollbarGhostHairline = BdApi.findModuleByProps("scrollbar").scrollbarGhostHairline;
-		this.listItemTooltipClass = BdApi.findModuleByProps("listItemTooltip").listItemTooltip;
 		this.containerDefault = BdApi.findModuleByProps("containerDefault", "containerDragAfter").containerDefault;
 
 		//Class collections
 		this.roleClasses = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
 		this.roleListClasses = BdApi.findModuleByProps("rolesList");
-		this.roleBodyClasses = BdApi.findModuleByProps("body", "divider");
 		this.popoutRootClasses = BdApi.findModuleByProps("container", "activity");
 		this.popoutBodyClasses = BdApi.findModuleByProps("thin", "scrollerBase");
-		this.popoutTextClasses = BdApi.findModuleByProps("section", "header", "body");
-		this.layerClasses = BdApi.findModuleByProps("layer");
-		this.tooltipClasses = BdApi.findModuleByProps("tooltip");
 
 		//Permissions
 		this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
 		this.PermissionUtilityStore = BdApi.findModuleByProps("computePermissionsForRoles");
 		this.hasPermission = BdApi.findModuleByProps("deserialize", "invert", "has").has;
-		this.canPermission = this.PermissionUtilityStore.can;
 
 		//Cache the function, makes it easier.
 		//We can't make these methods cleanly because that would make a `findModule` call.
@@ -144,7 +137,7 @@ class ChannelPermissions {
 		this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
 		this.useStateFromStoresArray = BdApi.findModuleByProps("useStateFromStoresArray").useStateFromStoresArray;
 
-		
+
 		//New way of doing things
 		//Thank you Strencher
 		this.patchTextChannel();
@@ -185,10 +178,10 @@ class ChannelPermissions {
 			//If it has a return value it means there's already something build,
 			//no need to create the base again. As such, unshift it into the first position.
 			if (returnValue)
-				returnValue.props.children.unshift(this.ChannelTooltip(props.channel));
+				returnValue.props.children.unshift(this.ChannelTooltip(props.channel, true));
 			//Otherwise, as mentioned, create the base and load the tooltip.
 			else
-				return BdApi.React.createElement("div", { className: `${this.popoutRootClasses.containter} ${this.popoutBodyClasses.thin}` }, this.ChannelTooltip(props.channel));
+				return BdApi.React.createElement("div", { className: `${this.popoutRootClasses.container} ${this.popoutBodyClasses.thin}` }, this.ChannelTooltip(props.channel, true));
 		});
 
 		//Handle the functionality,
@@ -240,7 +233,7 @@ class ChannelPermissions {
 		function PatchedThreadsPopout(props) {
 			const { children, className, channel } = props;
 			const threads = useActiveThreads(channel);
-
+			//                                              Ends up being: `popout-APcvZm`
 			const returnValue = BdApi.React.createElement("div", { className: className },
 				self.ChannelTooltip(channel),
 				threads && threads.length ? children : null
@@ -265,7 +258,7 @@ class ChannelPermissions {
 	 * @param {object} channel The channel object
 	 * @returns React render object.
 	 */
-	ChannelTooltip(channel) {
+	ChannelTooltip(channel, voice = false) {
 		//Destructure all the elements from the specific channel
 		const { allowedElements,
 			deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id), channel),
@@ -274,7 +267,7 @@ class ChannelPermissions {
 			sections = this.createSections(allowedElements, deniedElements);
 
 		//Set up variable for the HTML string we need to display in our tooltiptext.
-		return BdApi.React.createElement("div", { className: config.constants.channelTooltipClass }, [
+		return BdApi.React.createElement("div", { className: `${config.constants.channelTooltipClass}${voice ? "" : ` ${config.constants.textPopoutClass}`}`, style: { "margin-top": `${voice ? "-" : ""}8px` } }, [
 
 			//Check if the permissions of the channel are synced with the category
 			//If at all present, that is; We need to check it's type because null/undefined is not a boolean.
@@ -320,7 +313,7 @@ class ChannelPermissions {
 			//And if you have the role
 			self ?
 				//Add the style to strikethrough
-				BdApi.React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName, style: { "text-decoration": "line-through !important" } }, name) :
+				BdApi.React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName, style: { "text-decoration": "line-through" } }, name) :
 				//Otherwise just add as is
 				BdApi.React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName }, name)
 		]);
@@ -401,7 +394,7 @@ class ChannelPermissions {
 				const user = this.getUser(roleID),
 					member = this.getMember(guild.id, roleID),
 					//Is there a color?
-					color = member.colorString ?
+					color = member && member.colorString ?
 						//Convert it to our style
 						this.rgba2array(this.hex2rgb(member.colorString, config.constants.colorAlpha)) :
 						//Otherwise make it white
