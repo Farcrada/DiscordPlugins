@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.7.2
+ * @version 3.7.4
  * @description Hover over channels to view their required permissions.
  * 
  * @invite qH6UWCwfTu
@@ -20,8 +20,8 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions.",
-		version: "3.7.2",
-		author: "Farcrada",
+		version: "3.7.4",
+		author: "Farcrada and loads of thanks to Strencher",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
 	constants: {
@@ -87,7 +87,6 @@ class ChannelPermissions {
 		}
 	}
 
-	//If everything is ok; "after" start()
 	initialize() {
 		//Inject our styles
 		BdApi.injectCSS(config.constants.cssStyle, `
@@ -148,7 +147,7 @@ class ChannelPermissions {
 	stop() { BdApi.Patcher.unpatchAll(config.info.id); BdApi.clearCSS(config.constants.cssStyle); }
 
 	async patchTextChannel() {
-		const TextChannel = await global.ZLibrary.ReactComponents.getComponentByName("TextChannel", `.${this.containerDefault}`);
+		const TextChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("TextChannel", `.${this.containerDefault}`);
 
 		BdApi.Patcher.after(config.info.id, TextChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
 			//Transfer the events
@@ -186,11 +185,12 @@ class ChannelPermissions {
 
 		//Handle the functionality,
 		//for that we need to patch the VoiceChannel Render
-		const VoiceChannel = await global.ZLibrary.ReactComponents.getComponentByName("VoiceChannel", `.${this.containerDefault}`);
+		const VoiceChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("VoiceChannel", `.${this.containerDefault}`);
 
 		BdApi.Patcher.after(config.info.id, VoiceChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
 			//Get the props of the renderpopout
-			const props = global.ZLibrary.Utilities.findInReactTree(returnValue, e => e?.renderPopout);
+			const props = global.ZeresPluginLibrary.Utilities.findInReactTree(returnValue, e => e?.renderPopout);
+
 			//Transfer the events
 			returnValue.props.onMouseEnter = thisObject.handleMouseEnter;
 			returnValue.props.onMouseLeave = thisObject.handleMouseLeave;
@@ -202,53 +202,71 @@ class ChannelPermissions {
 	}
 
 	patchThreadChannel() {
+		//Get our popout module we will patch
 		const ActiveThreadsPopout = BdApi.findModule(m => m?.default?.displayName === "ActiveThreadsPopout"),
-			UnreadStore = BdApi.findModuleByProps("getUnreadCount"),
+			//The stores we use to reference from
 			ThreadsStore = BdApi.findModuleByProps("getActiveUnjoinedThreadsForParent"),
-			SnowflakeUtils = BdApi.findModuleByProps("extractTimestamp"),
+			GuildPermissions = BdApi.findModuleByProps("getGuildPermissions"),
+			//Our flux wraper
+			{ useStateFromStoresArray } = BdApi.findModuleByProps("useStateFromStoresArray"),
+			//Permission types for readability
+			permissionTypes = this.PermissionStore.Permissions,
+			//The functions are bound to somewhere else,
+			//so to avoid breaking other things, store `this`
 			self = this;
 
+
 		function useActiveThreads(channel) {
+			//We don't want accidental mishaps with voice channels
 			if (channel.isVocal())
 				return [];
 
-			return ThreadsStore.getActiveUnjoinedThreadsForParent(channel.guild_id, channel.id);
+			function compare(first, second) {
+				//No difference
+				if (first === second)
+					return 0;
+				//The first one is bigger
+				else if (null == second ||
+					first.length > second.length ||
+					first > second)
+					return 1;
+				//If it isn't equal and the first isn't bigger, the second must be.
+				else
+					return -1;
+			}
 
-			TEST.filter(thread => self.canPermission(self.Permissions.VIEW_CHANNEL, thread))
-				.sort((a, b) => {
-					const lastMessageInA = UnreadStore.lastMessageId(a.id),
-						lastMessageInB = UnreadStore.lastMessageId(b.id);
-
-					return SnowflakeUtils.compare(lastMessageInA, lastMessageInB);
-				})
-
-			//return v
-			/*self.useStateFromStoresArray([UnreadStore, ThreadsStore, self.PermissionUtilityStore], () => {
-				//return
-				console.log(ThreadsStore.getActiveUnjoinedThreadsForParent(channel.guild_id, channel.id));
-				return _(.reverse().value();
-			});*/
+			//This is a react hook married with flux
+			//We use this to cache the stores and limit our resource consumption,
+			//also enables us to update without having to call a `forceUpdate` on the owner
+			//As a result it can then also store the result and only needs to rerun when the stores have changed
+			return useStateFromStoresArray([ThreadsStore, GuildPermissions], () => {
+				//Get all the threads of the current channel
+				return Object.values(ThreadsStore.getActiveUnjoinedThreadsForParent(channel.guild_id, channel.id))
+					//Filter those we cannot view
+					.filter(thread => GuildPermissions.can(permissionTypes.VIEW_CHANNEL, thread));
+			});
 		}
 
 		function PatchedThreadsPopout(props) {
-			const { children, className, channel } = props;
-			const threads = useActiveThreads(channel);
-			//                                              Ends up being: `popout-APcvZm`
-			const returnValue = BdApi.React.createElement("div", { className: className },
+			//Get the neccessities from the props.
+			const { children, className, channel } = props,
+				//Get the threads we can access and sort them by most recent
+				threads = useActiveThreads(channel);
+
+			//Return our custom popout				Ends up being: `popout-APcvZm`
+			return BdApi.React.createElement("div", { className: className },
+				//Our tooltip
 				self.ChannelTooltip(channel),
+				//Null check the threads and if present append them
 				threads && threads.length ? children : null
 			);
-			return returnValue;
-			/**
-			 *	<div className={className}>
-			 *		{shouldShowPermissions(channel) && <ChannelTooltip overrides={getPermissionOverrides(channel)} guild={Guilds.getGuild(channel.guild_id)} className="threads" />}
-			 *		{threads.length ? <>{children}</> : null}
-			 *	</div>
-			 */
 		};
 
+		//Patcher McPatcherson
 		BdApi.Patcher.after(config.info.id, ActiveThreadsPopout, "default", (thisObject, methodArguments, returnValue) => {
+			//Replace the type, i.e. patch the type
 			returnValue.type = PatchedThreadsPopout;
+			//Assign the props
 			Object.assign(returnValue.props, methodArguments[0]);
 		});
 	}
@@ -256,15 +274,16 @@ class ChannelPermissions {
 	/**
 	 * Constructs the tooltip itself
 	 * @param {object} channel The channel object
+	 * @param {boolean} voice Is the tooltip for avoice channel?
 	 * @returns React render object.
 	 */
 	ChannelTooltip(channel, voice = false) {
 		//Destructure all the elements from the specific channel
 		const { allowedElements,
-			deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id), channel),
+			deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id).roles, channel),
+			//Get our channel details
 			{ topic,
-				categorySynced } = this.getDetails(channel),
-			sections = this.createSections(allowedElements, deniedElements);
+				categorySynced } = this.getDetails(channel);
 
 		//Set up variable for the HTML string we need to display in our tooltiptext.
 		return BdApi.React.createElement("div", { className: `${config.constants.channelTooltipClass}${voice ? "" : ` ${config.constants.textPopoutClass}`}`, style: { "margin-top": `${voice ? "-" : ""}8px` } }, [
@@ -285,11 +304,18 @@ class ChannelPermissions {
 				]) :
 				null
 
-			//And lastly; add the sections
-		].concat(sections));
+			//And lastly; create and add the sections
+		].concat(this.createSections(allowedElements, deniedElements)));
 	}
 
-	createSection(elements, type, title) {
+	/**
+	 * Creates a section with the given arguments
+	 * @param {*} type Type of section
+	 * @param {*} title Title for this section
+	 * @param {object} elements React elements to append under this title
+	 * @returns 
+	 */
+	createSection(type, title, elements) {
 		return elements[type] && elements[type].length > 0 ?
 			BdApi.React.createElement("div", null, [
 				BdApi.React.createElement("div", { className: this.roleListClasses.bodyTitle }, title),
@@ -298,15 +324,28 @@ class ChannelPermissions {
 			null;
 	}
 
+	/**
+	 * Wrapper function for neatness
+	 * @param {object} allowedElements Object with `roles` and `users` properties that are allowed
+	 * @param {object} deniedElements Object with `roles` and `users` properties that are denied
+	 * @returns An array of React elements to render.
+	 */
 	createSections(allowedElements, deniedElements) {
 		return [
-			this.createSection(allowedElements, "roles", "Allowed Roles:"),
-			this.createSection(allowedElements, "users", "Allowed Users:"),
-			this.createSection(deniedElements, "roles", "Denied Roles:"),
-			this.createSection(deniedElements, "users", "Denied Users:")
+			this.createSection("roles", "Allowed Roles:", allowedElements),
+			this.createSection("users", "Allowed Users:", allowedElements),
+			this.createSection("roles", "Denied Roles:", deniedElements),
+			this.createSection("users", "Denied Users:", deniedElements)
 		];
 	}
 
+	/**
+	 * Creates a role element
+	 * @param {Array} color Array made from an RGBA colors.
+	 * @param {*} name Name of the subject in this element.
+	 * @param {*} self Is this the user themselves?
+	 * @returns React element to render
+	 */
 	createRoleElement(color, name, self = false) {
 		return BdApi.React.createElement("div", { className: this.roleClasses.role, style: { "border-color": `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})` } }, [
 			BdApi.React.createElement("div", { className: this.roleClasses.roleCircle, style: { 'background-color': `rgb(${color[0]}, ${color[1]}, ${color[2]})` } }),
@@ -319,8 +358,13 @@ class ChannelPermissions {
 		]);
 	}
 
-	//Get the roles of the channel
-	getPermissionElements(guild, channel) {
+	/**
+	 * Construct and get all the appropriate permissions of users and roles given the guild and channel
+	 * @param {Array} guildRoles Array of guild roles to match against the channel
+	 * @param {*} channel The channel to derive permissions of users and roles from
+	 * @returns Object of allowed and denied containing `users` and `roles` react elements
+	 */
+	getPermissionElements(guildRoles, channel) {
 		//A place to store all the results
 		let allowedElements = {},
 			deniedElements = {},
@@ -333,7 +377,7 @@ class ChannelPermissions {
 			//Permissions
 			permissionTypes = this.PermissionStore.Permissions,
 			//Store yourself
-			myMember = this.getMember(guild.id, this.getCurrentUser().id),
+			myMember = this.getMember(channel.guild_id, this.getCurrentUser().id),
 			//Get the override types (array of two; ROLE and MEMBER)
 			overrideTypes = Object.keys(permissionOverrideTypes),
 			//Set white color for everyone role
@@ -356,7 +400,7 @@ class ChannelPermissions {
 				//Same but for a single member.
 				permissionMember = channelOW[roleID].type === permissionOverrideTypes.MEMBER ||
 					overrideTypes[channelOW[roleID].type] === permissionOverrideTypes.MEMBER,
-				role = guild.roles[roleID];
+				role = guildRoles[roleID];
 
 			//Check if the current permission type is a role
 			if (permissionRole) {
@@ -366,6 +410,7 @@ class ChannelPermissions {
 					this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) :
 					//Otherwise make it white
 					colorWhite;
+
 				//Predefine our arrays
 				if (!allowedElements["roles"])
 					allowedElements["roles"] = [];
@@ -392,7 +437,7 @@ class ChannelPermissions {
 			else if (permissionMember) {
 				//Specific allowed users get added to their own section
 				const user = this.getUser(roleID),
-					member = this.getMember(guild.id, roleID),
+					member = this.getMember(channel.guild_id, roleID),
 					//Is there a color?
 					color = member && member.colorString ?
 						//Convert it to our style
@@ -424,7 +469,11 @@ class ChannelPermissions {
 		return { allowedElements, deniedElements };
 	}
 
-
+	/**
+	 * Gets the topic and if it's synced with the category or not (if applicable) of the channel
+	 * @param {object} channel The channel to get the topic and check if they are synced with the category (if applicable)
+	 * @returns A details object containing the channel topic and if it's synced with the category or not (if applicable)
+	 */
 	getDetails(channel) {
 		//A category doesn't have a topic so we can simply return as is.
 		if (channel.isCategory())
@@ -443,7 +492,11 @@ class ChannelPermissions {
 		}
 	}
 
-	//Get all the permissions of a channel and if they're allwoing or not
+	/**
+	 * Gets every permission of a role concerning a given channel
+	 * @param {object} channel The channel to get permissions from.
+	 * @returns All permissions of that channel per role as an object
+	 */
 	getPermissionsOfChannel(channel) {
 		//Store the overwrites of the channel
 		const channelOW = channel.permissionOverwrites,
@@ -478,12 +531,11 @@ class ChannelPermissions {
 		return permissionObject;
 	}
 
-	encodeToHTML(string) {
-		var ele = document.createElement("div");
-		ele.innerText = string;
-		return ele.innerHTML;
-	}
-
+	/**
+	 * Convert RGBA value into an array for better use.
+	 * @param {string} rgba The color string 
+	 * @returns An array of R, G, B, A
+	 */
 	rgba2array(rgba) {
 		//Expression gets everything between '[' and ']'.
 		let regExp = /\(([^)]+)\)/;
