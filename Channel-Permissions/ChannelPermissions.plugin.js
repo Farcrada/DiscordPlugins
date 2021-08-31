@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.7.3
+ * @version 3.7.4
  * @description Hover over channels to view their required permissions.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
         name: "Channel Permissions",
         id: "ChannelPermissions",
         description: "Hover over channels to view their required permissions.",
-        version: "3.7.2",
+        version: "3.7.4",
         author: "Farcrada",
         updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
     },
@@ -192,10 +192,13 @@ class ChannelPermissions {
     }
 
     stop() {
-        //We also need to stop that activity if it's needed.
-        document.querySelector(`.${this.sidebarScroller}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
-
+        //Clear our styling
         BdApi.clearCSS(config.constants.cssStyle);
+        
+        //We also need to stop any remaining activity if it's needed.
+        try {
+            document.querySelector(`.${this.sidebarScroller}`).removeEventListener('mouseover', this.createChannelPermissionsToolTip);
+        } catch (e) { /*This error is basically telling us it can't find the element, which is fine.*/ }
     }
 
     createChannelPermissionsToolTip(e) {
