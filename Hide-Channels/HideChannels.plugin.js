@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.0
+ * @version 2.0.1
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.0",
+		version: "2.0.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -146,25 +146,8 @@ class HideChannels {
 		//The header bar above the "chat"
 		const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 
-		BdApi.Patcher.after(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
-			//Get the toolbar children
-			let toolbarChildren = returnValue?.props?.children?.props?.children[0]?.props?.children[0]?.props?.children;
-
-			//If it's not a "title" it means it's one of the Discord items on the home page.
-			if (!returnValue?.className?.includes("title"))
-				toolbarChildren = returnValue?.props?.children?.props?.children[0]?.props?.children;
-
-			//If neither or nothing is found, exit.
-			if (!toolbarChildren)
-				return;
-
-			//Check if we already added it.
-			for (const child of toolbarChildren)
-				if (child?.key === config.info.id)
-					return;
-
-			//Add it in-place.
-			toolbarChildren.unshift(BdApi.React.createElement(this.hideChannelComponent));
+		BdApi.Patcher.before(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
+			methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
 		});
 	}
 
