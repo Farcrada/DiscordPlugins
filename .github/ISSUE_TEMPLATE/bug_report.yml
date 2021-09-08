@@ -31,14 +31,26 @@ body:
     description: If applicable, add screenshots to help explain your problem.
 - type: input
   attributes:
+    label: OS version
+    description: Linux (distro), macOS, Windows (7, 8, 9, 10)
+  validations:
+    required: true
+- type: input
+  attributes:
     label: Discord version
     description: Stable, Canary, PTB
   validations:
     required: true
 - type: input
   attributes:
-    label: OS version
-    description: Linux (distro), macOS, Windows (7, 8, 9, 10)
+    label: BetterDiscord version
+    description: Found in your settings, bottom left.
+  validations:
+    required: true
+- type: input
+  attributes:
+    label: Plugin version
+    description: Found in your settings -> plugins.
   validations:
     required: true
 - type: textarea
