@@ -20,9 +20,9 @@ const config = {
 class MoveAllVoiceUsers {
     start() {
         BdApi.showConfirmationModal(`Plugin ${config.info.name} removed`,
-            `The plugin ${config.info.name} has been removed. It is a plugin dangerous to the user.
+            `The plugin ${config.info.name} has been removed. It directly speaks to the API and can thus be dangerous.
 
-It has a certain guarantee to get the user banned. If you would like to read more press "Visit".`, {
+Abuse has a certain guarantee to get the user banned. If you would like to read more press "Visit".`, {
             confirmText: "Visit",
             cancelText: "Cancel",
             onConfirm: () => {

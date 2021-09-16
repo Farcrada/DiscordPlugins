@@ -135,7 +135,7 @@ class ChannelPermissions {
 		//React shit
 		this.useStateFromStoresArray = BdApi.findModuleByProps("useStateFromStoresArray").useStateFromStoresArray;
 
-		
+		//Patches
 		this.patchTextChannel();
 		this.patchVoiceChannel();
 		this.patchThreadChannel();
