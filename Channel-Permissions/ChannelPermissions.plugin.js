@@ -1,17 +1,13 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 3.7.4
- * @description Hover over channels to view their required permissions.
+ * @version 4.0.0
+ * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Channel-Permissions/ChannelPermissions.plugin.js
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js
- *
- * Massive thanks to Strencher for getting me familiar with functional components
- * and getting me in the right direction.
- *  <3
  */
 
 
@@ -19,9 +15,9 @@ const config = {
 	info: {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
-		description: "Hover over channels to view their required permissions.",
-		version: "3.7.4",
-		author: "Farcrada and loads of thanks to Strencher",
+		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
+		version: "4.0.0",
+		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
 	constants: {
@@ -65,10 +61,11 @@ class ChannelPermissions {
 				BdApi.Plugins.enable("ZeresPluginLibrary");
 				if (!BdApi.Plugins.isEnabled("ZeresPluginLibrary"))
 					throw new Error("Failed to enable ZeresPluginLibrary.");
+
+				BdApi.alert("Could not enable or find ZeresPluginLibrary", "Could not start the plugin because ZeresPluginLibrary could not be found or enabled. Please enable and/or download it manually in your plugins folder.");
 			}
 			catch (err) {
 				console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
-
 			}
 		}
 
@@ -134,11 +131,11 @@ class ChannelPermissions {
 		this.getCurrentUser = UserStore.getCurrentUser;
 		//Store color converter (hex -> rgb) and d
 		this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
+
+		//React shit
 		this.useStateFromStoresArray = BdApi.findModuleByProps("useStateFromStoresArray").useStateFromStoresArray;
 
-
-		//New way of doing things
-		//Thank you Strencher
+		
 		this.patchTextChannel();
 		this.patchVoiceChannel();
 		this.patchThreadChannel();
@@ -153,11 +150,13 @@ class ChannelPermissions {
 			//Transfer the events
 			returnValue.props.onMouseEnter = thisObject.handleMouseEnter;
 			returnValue.props.onMouseLeave = thisObject.handleMouseLeave;
+
 			//Show the popout
 			if (thisObject.state.shouldShowThreadsPopout)
 				returnValue.props.children.props.shouldShow = true;
 		});
 
+		//For live (un)loading
 		TextChannel.forceUpdateAll();
 	}
 
@@ -187,18 +186,46 @@ class ChannelPermissions {
 		//for that we need to patch the VoiceChannel Render
 		const VoiceChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("VoiceChannel", `.${this.containerDefault}`);
 
+		//Patch the handlers before since they are merely pased around.
+		BdApi.Patcher.before(config.info.id, VoiceChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
+			//Handle smooth delays
+			thisObject.handleMouseEnter = function () {
+				//It's got it's own smoothing but it chooses not to use it.
+				//Which is fairly annoying, considering my plugin.
+				thisObject.activitiesHideTimeout.stop();
+				//Start a new timer with a function that should return the given execution.
+				thisObject.activitiesHideTimeout.start(200, function () {
+					//Set the state back to true, meaning it shows.
+					return thisObject.setState({
+						shouldShowActivities: !0
+					})
+				});
+			};
+			thisObject.handleMouseLeave = function () {
+				//But when we leave we need to interrupt the current imer to show.
+				//That's where `stop()` comes in.
+				thisObject.activitiesHideTimeout.stop();
+				//Same as above, and the times reflect those of text channels.
+				thisObject.activitiesHideTimeout.start(250, function () {
+					//Set state back to false, meaning it hides.
+					return thisObject.setState({
+						shouldShowActivities: !1
+					})
+				});
+			};
+		});
+
+		//Tell it to show after, because we always have something.
 		BdApi.Patcher.after(config.info.id, VoiceChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
 			//Get the props of the renderpopout
-			const props = global.ZeresPluginLibrary.Utilities.findInReactTree(returnValue, e => e?.renderPopout);
-
-			//Transfer the events
-			returnValue.props.onMouseEnter = thisObject.handleMouseEnter;
-			returnValue.props.onMouseLeave = thisObject.handleMouseLeave;
+			const props = this.findValue(returnValue, "renderPopout", true);
 			//Show the popout
-			if (thisObject.state.shouldShowActivities) {
+			if (thisObject.state.shouldShowActivities)
 				if (props) props.shouldShow = true;
-			}
 		});
+
+		//For live (un)loading
+		VoiceChannel.forceUpdateAll();
 	}
 
 	patchThreadChannel() {
@@ -220,20 +247,6 @@ class ChannelPermissions {
 			//We don't want accidental mishaps with voice channels
 			if (channel.isVocal())
 				return [];
-
-			function compare(first, second) {
-				//No difference
-				if (first === second)
-					return 0;
-				//The first one is bigger
-				else if (null == second ||
-					first.length > second.length ||
-					first > second)
-					return 1;
-				//If it isn't equal and the first isn't bigger, the second must be.
-				else
-					return -1;
-			}
 
 			//This is a react hook married with flux
 			//We use this to cache the stores and limit our resource consumption,
@@ -274,7 +287,7 @@ class ChannelPermissions {
 	/**
 	 * Constructs the tooltip itself
 	 * @param {object} channel The channel object
-	 * @param {boolean} voice Is the tooltip for avoice channel?
+	 * @param {boolean} [voice=false] Is the tooltip for avoice channel?
 	 * @returns React render object.
 	 */
 	ChannelTooltip(channel, voice = false) {
@@ -310,8 +323,8 @@ class ChannelPermissions {
 
 	/**
 	 * Creates a section with the given arguments
-	 * @param {*} type Type of section
-	 * @param {*} title Title for this section
+	 * @param {string} type Type of section that is inside `elements`
+	 * @param {string} title Title for this section
 	 * @param {object} elements React elements to append under this title
 	 * @returns 
 	 */
@@ -341,9 +354,9 @@ class ChannelPermissions {
 
 	/**
 	 * Creates a role element
-	 * @param {Array} color Array made from an RGBA colors.
-	 * @param {*} name Name of the subject in this element.
-	 * @param {*} self Is this the user themselves?
+	 * @param {string[]} color Array made from an RGBA colors.
+	 * @param {string} name Name of the subject in this element.
+	 * @param {boolean} [self=false] Is this the user themselves?
 	 * @returns React element to render
 	 */
 	createRoleElement(color, name, self = false) {
@@ -360,8 +373,8 @@ class ChannelPermissions {
 
 	/**
 	 * Construct and get all the appropriate permissions of users and roles given the guild and channel
-	 * @param {Array} guildRoles Array of guild roles to match against the channel
-	 * @param {*} channel The channel to derive permissions of users and roles from
+	 * @param {object} guildRoles Guild roles object to match against the channel
+	 * @param {object} channel The channel to derive permissions of users and roles from
 	 * @returns Object of allowed and denied containing `users` and `roles` react elements
 	 */
 	getPermissionElements(guildRoles, channel) {
@@ -541,5 +554,62 @@ class ChannelPermissions {
 		let regExp = /\(([^)]+)\)/;
 		//[0] is with '[]' characters, and [1] is without.
 		return regExp.exec(rgba)[1].split(',');
+	}
+
+	/**
+	 * Finds the value inside the `instance` object.
+	 * @param {object} instance The instance object to find in.
+	 * @param {string} searchkey What key we're searching for.
+	 * @param {boolean} getParentProperty Do we want the search's parent?
+	 * @returns The found object, if no matches are found, returns `undefined`.
+	 */
+	findValue(instance, searchkey, getParentProperty = false) {
+		//Where to search
+		let whitelist = {
+			props: true,
+			children: true,
+			child: true,
+			sibling: true
+		};
+		//Where not to search
+		let blacklist = {
+			contextSection: true
+		};
+
+		return getKey(instance, getParentProperty);
+
+		function getKey(instance, getParentProperty) {
+			//In case the result is never filled, predefine it.
+			let result = undefined;
+			//Check if it exists
+			if (instance && !Node.prototype.isPrototypeOf(instance)) {
+				//Filter inherited properties
+				let keys = Object.getOwnPropertyNames(instance);
+				//As long as result is undefined and within keys.length; loop
+				for (let i = 0; result === undefined && i < keys.length; i++) {
+					let key = keys[i];
+
+					//Make sure the property's not blacklisted
+					if (key && !blacklist[key]) {
+						//Cache value
+						let value = instance[key];
+
+						//if this is the key we're looking for, return it
+						if (searchkey === key)
+							//But if we want the property itself
+							if (getParentProperty)
+								//return the instance itself.
+								return instance;
+							else
+								return value;
+
+						//If it's an object or function (and thus searchable) and it is whitelisted
+						else if ((typeof value === "object" || typeof value === "function") && whitelist[key])
+							result = getKey(value);
+					}
+				}
+			}
+			return result;
+		}
 	}
 }
