@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.1
+ * @version 2.0.2
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.1",
+		version: "2.0.2",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -161,10 +161,9 @@ class HideChannels {
 		});
 	}
 
-	//
 	hideChannelComponent = () => {
 		//When a state updates, it rerenders.
-		const [hidden, setHidden] = BdApi.React.useState(false);
+		const [hidden, setHidden] = BdApi.React.useState(document.querySelector(`.${this.sidebarClass}`).classList.contains(config.constants.hideElementsName) ? true : false);
 
 		//Keydown event
 		this.useListener("keydown", e => {
