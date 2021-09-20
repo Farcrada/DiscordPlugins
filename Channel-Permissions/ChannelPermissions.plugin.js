@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.1
+ * @version 4.0.2
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -516,13 +516,15 @@ class ChannelPermissions {
 	 * @returns All permissions of that channel per role as an object
 	 */
 	getPermissionsOfChannel(channel) {
+		//Define our return object
+		let permissionObject = {};
+
+		if(!channel) return permissionObject
+
 		//Store the overwrites of the channel
 		const channelOW = channel.permissionOverwrites,
 			//Get Discord's permissions
 			permissionTypes = this.PermissionStore.Permissions;
-
-		//Define our return object
-		let permissionObject = {};
 
 		//Loop through all the permissions by key
 		for (const roleID in channelOW) {
