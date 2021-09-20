@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.3
+ * @version 2.0.5
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.3",
+		version: "2.0.5",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -36,7 +36,7 @@ class HideChannels {
 	getVersion() { return config.info.version; }
 	getAuthor() { return config.info.author; }
 
-	start() {
+	load() {
 		if (!global.ZeresPluginLibrary) {
 			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
 				confirmText: "Download Now",
@@ -68,41 +68,28 @@ class HideChannels {
 
 			}
 		}
-
-		//Now try to initialize.
-		try {
-			this.initialize();
-		}
-		catch (err) {
-			try {
-				console.error("Attempting to stop after initialization error...", err)
-				this.stop();
-			}
-			catch (err) {
-				console.error(this.getName() + ".stop()", err);
-			}
-		}
 	}
 
-	initialize() {
-		//The sidebar to "minimize"/hide
-		this.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
+	start() {
+		try {
+			//The sidebar to "minimize"/hide
+			this.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
 
-		//And the keybind
-		this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
-		this.keybind = this.setKeybind(this.keybindSetting);
-		//Predefine current keybind
-		this.currentlyPressed = {};
+			//And the keybind
+			this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
+			this.keybind = this.filterKeybind(this.keybindSetting);
+			//Predefine current keybind
+			this.currentlyPressed = {};
 
-		//React components for settings
-		this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
-		this.KeybindRecorder = BdApi.findModuleByDisplayName("KeybindRecorder");
+			//React components for settings
+			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
+			this.KeybindRecorder = BdApi.findModuleByDisplayName("KeybindRecorder");
 
-		//Check if there is any CSS we have already, and remove it.
-		BdApi.clearCSS(config.constants.cssStyle);
+			//Check if there is any CSS we have already, and remove it.
+			BdApi.clearCSS(config.constants.cssStyle);
 
-		//Now inject our (new) CSS
-		BdApi.injectCSS(config.constants.cssStyle, `
+			//Now inject our (new) CSS
+			BdApi.injectCSS(config.constants.cssStyle, `
 /* Button CSS */
 #${config.constants.buttonID} {
     min-width: 24px;
@@ -138,78 +125,36 @@ class HideChannels {
     transition: width 400ms ease;
 }`);
 
-		//Render the button and we're off to the races!
-		this.patchTitleBar();
+			//Render the button and we're off to the races!
+			this.patchTitleBar();
+		}
+		catch (err) {
+			try {
+				console.error("Attempting to stop after starting error...", err)
+				this.stop();
+			}
+			catch (err) {
+				console.error(this.getName() + ".stop()", err);
+			}
+		}
 	}
 
-	patchTitleBar() {
-		//The header bar above the "chat"
-		const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
-
-		BdApi.Patcher.before(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
-			if (methodArguments[0] && methodArguments[0].children) methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
-		});
-	}
-
-	//Functional component to listen; compact, reusable, clean
-	useListener = (event, callback, bubbling, target = document) => {
-		BdApi.React.useEffect(() => {
-			//ComponentDidMount
-			target.addEventListener(event, callback, bubbling);
-			//ComponentWillUnmount
-			return () => target.removeEventListener(event, callback, bubbling);
-		});
-	}
-
-	hideChannelComponent = () => {
-		//When a state updates, it rerenders.
-		const [hidden, setHidden] = BdApi.React.useState(document.querySelector(`.${this.sidebarClass}`).classList.contains(config.constants.hideElementsName) ? true : false);
-
-		//Keydown event
-		this.useListener("keydown", e => {
-			//Since we made this an object,
-			//we can make new propertire with `[]`
-			this.currentlyPressed[e.keyCode] = true;
-		}, true, window);
-
-		//Keyup event
-		this.useListener("keyup", e => {
-			//Check if every currentlyPessed is in our saved keybind.
-			if (this.keybind.every(key => this.currentlyPressed[key] === true))
-				//Rerender on toggle; change the state.
-				setHidden(this.toggleChannels.bind(this));
-
-			//Current key goes up, so...
-			this.currentlyPressed[e.keyCode] = false;
-		}, true, window);
-
-		return BdApi.React.createElement("div", {
-			//Styling
-			id: config.constants.buttonID,
-			//To identify our object
-			key: config.info.id,
-			//The icon
-			className: hidden ? config.constants.buttonHidden : config.constants.buttonVisible,
-			//Rerender on toggle; change the state.
-			onClick: () => setHidden(this.toggleChannels.bind(this))
-		});
-	}
-
-	//Settings
 	getSettingsPanel() {
+		//Return our keybind settings wrapped in a form item
 		return BdApi.React.createElement(this.FormItem, {
 			title: "Toggle by keybind:"
 		},
+			//Containing a keybind recorder.
 			BdApi.React.createElement(this.KeybindRecorder, {
 				defaultValue: this.keybindSetting,
 				onChange: (e) => {
-					this.keybind = this.setKeybind(e);
+					//Set the keybind and save it.
+					this.keybind = this.filterKeybind(e);
 					BdApi.saveData(config.info.id, "keybind", e);
 				}
 			}));
 	}
 
-	//Remove and cleanup
 	stop() {
 		BdApi.Patcher.unpatchAll(config.info.id);
 
@@ -223,55 +168,144 @@ class HideChannels {
 			sidebar.classList.remove(config.constants.hideElementsName);
 	}
 
-	//Toggle McToggleson.
-	toggleChannels(state) {
-		//Get the button and sidebar
-		let sidebar = document.querySelector(`.${this.sidebarClass}`)
+	patchTitleBar() {
+		//The header bar above the "chat"; this is the same for the `Split View`.
+		const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 
-		//If it is showing, we need to hide it.
-		if (!state)
-			//Add class for CSS
-			sidebar.classList.add(config.constants.hideElementsName);
-
-		//If it is hidden, we need to show it.
-		else
-			sidebar.classList.remove(config.constants.hideElementsName);
-
-		return !state;
+		BdApi.Patcher.before(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
+			//When elements are being re-rendered we need to check if there actually is a place for us.
+			if (methodArguments[0]?.children)
+				//Along with that we need to check if what we're adding to is an array;
+				//because if not we'll render a button on the split view.
+				if (Array.isArray(methodArguments[0].children))
+					//And since we want to be on the most left of the header bar for style we unshift into the array.
+					methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
+		});
 	}
 
-	//These could be statics, but looks scuffed.
-	//Nullchecking, basically
-	checkKeybindLoad(keybindSetting) {
-		if (!keybindSetting)
-			return [[0, 162], [0, 72]];
-		for (const keybind of keybindSetting) {
+	/**
+	 * Use this to make a despensable easy to use listener with React.
+	 * @param {string} event The name of the event to listen for.
+	 * @param {callback} callback Function to call when said event is triggered.
+	 * @param {boolean} bubbling Handle bubbling or not
+	 * @param {object} [target] The object to attach our listener to.
+	 */
+	useListener(event, callback, bubbling, target = document) {
+		BdApi.React.useEffect(() => {
+			//ComponentDidMount
+			target.addEventListener(event, callback, bubbling);
+			//ComponentWillUnmount
+			return () => target.removeEventListener(event, callback, bubbling);
+		});
+	}
+
+	/**
+	 * React component for our button.
+	 * @returns React element
+	 */
+	hideChannelComponent = () => {
+		//Only fetch the sidebar on a rerender.
+		const sidebarNode = document.querySelector(`.${this.sidebarClass}`),
+		//When a state updates, it rerenders.
+			[hidden, setHidden] = BdApi.React.useState(
+				//Check on a rerender where our side bar is so we can correctly reflect this.
+				sidebarNode.classList.contains(config.constants.hideElementsName) ?
+					true : false);
+
+		//Keydown event
+		this.useListener("keydown", e => {
+			//Since we made this an object,
+			//we can make new propertire with `[]`
+			this.currentlyPressed[e.keyCode] = true;
+			//Account for bubbling and attach to the global: `window`
+		}, true, window);
+
+		//Keyup event
+		this.useListener("keyup", e => {
+			//Check if every currentlyPessed is in our saved keybind.
+			if (this.keybind.every(key => this.currentlyPressed[key] === true))
+				//Toggle the sidebar and rerender on toggle; change the state
+				setHidden(this.toggleSidebar(sidebarNode));
+
+			//Current key goes up, so...
+			this.currentlyPressed[e.keyCode] = false;
+			//Account for bubbling and attach to the global: `window`
+		}, true, window);
+
+		//Return our element.
+		return BdApi.React.createElement("div", {
+			//Styling
+			id: config.constants.buttonID,
+			//To identify our object
+			key: config.info.id,
+			//The icon
+			className: hidden ? config.constants.buttonHidden : config.constants.buttonVisible,
+			//Toggle the sidebar and rerender on toggle; change the state.
+			onClick: () => setHidden(this.toggleSidebar(sidebarNode))
+		});
+	}
+
+	/**
+	 * Adds and removes our CSS to make our sidebar appear and disappear.
+	 * @param {Node} sidebar Sidebar node we want to toggle.
+	 * @returns The passed state in reverse.
+	 */
+	toggleSidebar(sidebar) {
+		/**
+		 * @param {boolean} state State that determines the toggle.
+		 */
+		return state => {
+			//If it is showing, we need to hide it.
+			if (!state)
+				//We hide it through CSS by adding a class.
+				sidebar.classList.add(config.constants.hideElementsName);
+			//If it is hidden, we need to show it.
+			else
+				sidebar.classList.remove(config.constants.hideElementsName);
+			return !state;
+		};
+	}
+
+	/**
+	 * Checks the given keybind for validity. If not valid returns a default keybind.
+	 * @param {Array.<Array.<number>>} keybindToLoad The keybind to filter and load in.
+	 * @param {!Array.<Array.<number>>} [defaultKeybind] A default keybind to fall back on in case of invalidity.
+	 * @returns Will return the keybind or return a default keybind.
+	 */
+	checkKeybindLoad(keybindToLoad, defaultKeybind = [[0, 162], [0, 72]]) {
+		if (!keybindToLoad)
+			return defaultKeybind;
+		for (const keybind of keybindToLoad) {
 			if (Array.isArray(keybind)) {
 				for (const key of keybind)
 					if (typeof (key) !== "number")
-						return [[0, 162], [0, 72]];
+						return defaultKeybind;
 			}
 			else if (typeof (keybind) !== "number")
-				return [[0, 162], [0, 72]];
+				return defaultKeybind;
 
 		}
-		return keybindSetting;
+		return keybindToLoad;
 	}
 
-	//Filter that shit
-	setKeybind(keybind) {
-		//We need to filter the tab, ctrl, alt and shift keys because it's scuffed.
-		//Lets fix it.
+	/**
+	 * Filters a keybind to work with the `EventListener`s.
+	 * @param {(Array.<number>|Array.<Array.<number>>)} keybind Keybind to filter.
+	 * @returns {(Array.<number>|Array.<Array.<number>>)} The filtered keybind.
+	 */
+	filterKeybind(keybind) {
 		return keybind.map(keyCode => {
+			//Multiple keys
 			if (Array.isArray(keyCode[0]))
 				for (let i = 0; i < keyCode.length; i++)
 					keyCode[i] = fixCode(keyCode[i])
+			//Single keys
 			else
 				keyCode = fixCode(keyCode);
+			//Return our fixed keycode.
 			return keyCode;
 
 			function fixCode(code) {
-				//code[0] is always 0, lets make this simpel for us.
 				code = code[1];
 				switch (code) {
 					case 20:                    //Tab: 20 -> 9
@@ -288,7 +322,7 @@ class HideChannels {
 					case 164:                   //Alt: 164 -> 18
 					case 165:                   //R Alt: 165 ->  18
 						return 18;
-					default: return code;       //Other keys? return;
+					default: return code;       //Other keys? return them;
 				}
 			}
 		});
