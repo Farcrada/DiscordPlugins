@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.2
+ * @version 2.0.3
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.2",
+		version: "2.0.3",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -147,7 +147,7 @@ class HideChannels {
 		const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 
 		BdApi.Patcher.before(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
-			methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
+			if (methodArguments[0] && methodArguments[0].children) methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
 		});
 	}
 
