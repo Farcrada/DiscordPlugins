@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.0
+ * @version 4.0.1
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.0",
+		version: "4.0.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -262,16 +262,21 @@ class ChannelPermissions {
 
 		function PatchedThreadsPopout(props) {
 			//Get the neccessities from the props.
-			const { children, className, channel } = props,
-				//Get the threads we can access and sort them by most recent
-				threads = useActiveThreads(channel);
+			const { children, className, channel } = props;
+
+			if (!channel) {
+				console.error("Channel is missing. Current props: ", JSON.parse(JSON.stringify(props)));
+				return null;
+			}
 
 			//Return our custom popout				Ends up being: `popout-APcvZm`
 			return BdApi.React.createElement("div", { className: className },
 				//Our tooltip
 				self.ChannelTooltip(channel),
-				//Null check the threads and if present append them
-				threads && threads.length ? children : null
+				//Get the threads we can access and sort them by most recent
+				useActiveThreads(channel)?.length ?
+					//Null check the threads and if present append them
+					children : null
 			);
 		};
 
@@ -432,13 +437,13 @@ class ChannelPermissions {
 
 				if (allowedPermission) {
 					//And if it's not just @everyone role
-					if (role && role.name !== "@everyone")
+					if (role?.name !== "@everyone")
 						//Create the element and push it through to the Allowed array
 						allowedElements["roles"].push(this.createRoleElement(color, role.name, myMember.roles.includes(roleID)));
 				}
 				else if (deniedPermission) {
 					//If @everyone is denied set the variable to represent this.
-					if (role && role.name === "@everyone")
+					if (role?.name === "@everyone")
 						//Specific everyone denied
 						everyoneDenied = true;
 
@@ -452,7 +457,7 @@ class ChannelPermissions {
 				const user = this.getUser(roleID),
 					member = this.getMember(channel.guild_id, roleID),
 					//Is there a color?
-					color = member && member.colorString ?
+					color = member?.colorString ?
 						//Convert it to our style
 						this.rgba2array(this.hex2rgb(member.colorString, config.constants.colorAlpha)) :
 						//Otherwise make it white
@@ -547,7 +552,7 @@ class ChannelPermissions {
 	/**
 	 * Convert RGBA value into an array for better use.
 	 * @param {string} rgba The color string 
-	 * @returns An array of R, G, B, A
+	 * @returns A string array of [R, G, B, A]
 	 */
 	rgba2array(rgba) {
 		//Expression gets everything between '[' and ']'.
