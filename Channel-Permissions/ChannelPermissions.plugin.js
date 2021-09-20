@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.1
+ * @version 4.0.2
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.1",
+		version: "4.0.2",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -35,7 +35,7 @@ class ChannelPermissions {
 	//I like my spaces. 
 	getName() { return config.info.name; }
 
-	start() {
+	load() {
 		if (!global.ZeresPluginLibrary) {
 			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
 				confirmText: "Download Now",
@@ -68,25 +68,13 @@ class ChannelPermissions {
 				console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
 			}
 		}
-
-		//Now try to initialize.
-		try {
-			this.initialize();
-		}
-		catch (err) {
-			try {
-				console.error("Attempting to stop after initialization error...", err)
-				this.stop();
-			}
-			catch (err) {
-				console.error(this.getName() + ".stop()", err);
-			}
-		}
 	}
 
-	initialize() {
-		//Inject our styles
-		BdApi.injectCSS(config.constants.cssStyle, `
+	start() {
+		//Now try to initialize.
+		try {
+			//Inject our styles
+			BdApi.injectCSS(config.constants.cssStyle, `
 .${config.constants.textPopoutClass} {
 	padding: 0 4px;
 }
@@ -104,46 +92,110 @@ class ChannelPermissions {
 	font-size: 12px;
 	margin-bottom: 10px;
 }`);
-		//Create and cache expensive `BdApi.findModule` calls.
+			//Create and cache expensive `BdApi.findModule` calls.
 
-		//Lose/single classes
-		this.containerDefault = BdApi.findModuleByProps("containerDefault", "containerDragAfter").containerDefault;
+			//Lose/single classes
+			this.containerDefault = BdApi.findModuleByProps("containerDefault", "containerDragAfter").containerDefault;
 
-		//Class collections
-		this.roleClasses = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
-		this.roleListClasses = BdApi.findModuleByProps("rolesList");
-		this.popoutRootClasses = BdApi.findModuleByProps("container", "activity");
-		this.popoutBodyClasses = BdApi.findModuleByProps("thin", "scrollerBase");
+			//Class collections
+			this.roleClasses = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
+			this.roleListClasses = BdApi.findModuleByProps("rolesList");
+			this.popoutRootClasses = BdApi.findModuleByProps("container", "activity");
+			this.popoutBodyClasses = BdApi.findModuleByProps("thin", "scrollerBase");
 
-		//Permissions
-		this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
-		this.PermissionUtilityStore = BdApi.findModuleByProps("computePermissionsForRoles");
-		this.hasPermission = BdApi.findModuleByProps("deserialize", "invert", "has").has;
+			//Permissions
+			this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
+			this.hasPermission = BdApi.findModuleByProps("deserialize", "invert", "has").has;
 
-		//Cache the function, makes it easier.
-		//We can't make these methods cleanly because that would make a `findModule` call.
-		this.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
-		this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
-		this.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
-		//Set local store and get the functions we need.
-		const UserStore = BdApi.findModuleByProps("getUser", "getUsers");
-		this.getUser = UserStore.getUser;
-		this.getCurrentUser = UserStore.getCurrentUser;
-		//Store color converter (hex -> rgb) and d
-		this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
+			//Cache the function, makes it easier.
+			//We can't make these methods cleanly because that would make a `findModule` call.
+			this.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
+			this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
+			this.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
+			//Set local store and get the functions we need.
+			const UserStore = BdApi.findModuleByProps("getUser", "getUsers");
+			this.getUser = UserStore.getUser;
+			this.getCurrentUser = UserStore.getCurrentUser;
+			//Store color converter (hex -> rgb) and d
+			this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
 
-		//React shit
-		this.useStateFromStoresArray = BdApi.findModuleByProps("useStateFromStoresArray").useStateFromStoresArray;
-
-		//Patches
-		this.patchTextChannel();
-		this.patchVoiceChannel();
-		this.patchThreadChannel();
+			//Patches
+			this.patchTextChannel();
+			this.patchVoiceChannel();
+		}
+		catch (err) {
+			try {
+				console.error("Attempting to stop after starting error...", err)
+				this.stop();
+			}
+			catch (err) {
+				console.error(this.getName() + ".stop()", err);
+			}
+		}
 	}
 
 	stop() { BdApi.Patcher.unpatchAll(config.info.id); BdApi.clearCSS(config.constants.cssStyle); }
 
 	async patchTextChannel() {
+		//Get our popout module we will patch
+		const ActiveThreadsPopout = BdApi.findModule(m => m?.default?.displayName === "ActiveThreadsPopout"),
+			//The stores we use to reference from
+			ThreadsStore = BdApi.findModuleByProps("getActiveUnjoinedThreadsForParent"),
+			GuildPermissions = BdApi.findModuleByProps("getGuildPermissions"),
+			//Our flux wraper
+			{ useStateFromStoresArray } = BdApi.findModuleByProps("useStateFromStoresArray"),
+			//Permission types for readability
+			permissionTypes = this.PermissionStore.Permissions,
+			//The functions are bound to somewhere else,
+			//so to avoid breaking other things, store `this`
+			self = this;
+
+
+		function useActiveThreads(channel) {
+			//We don't want accidental mishaps with voice channels
+			if (channel.isVocal())
+				return [];
+
+			//This is a react hook married with flux
+			//We use this to cache the stores and limit our resource consumption,
+			//also enables us to update without having to call a `forceUpdate` on the owner
+			//As a result it can then also store the result and only needs to rerun when the stores have changed
+			return useStateFromStoresArray([ThreadsStore, GuildPermissions], () => {
+				//Get all the threads of the current channel
+				return Object.values(ThreadsStore.getActiveUnjoinedThreadsForParent(channel.guild_id, channel.id))
+					//Filter those we cannot view
+					.filter(thread => GuildPermissions.can(permissionTypes.VIEW_CHANNEL, thread));
+			});
+		}
+
+		function PatchedThreadsPopout(props) {
+			//Get the neccessities from the props.
+			const { children, className, channel } = props;
+
+			if (!channel) {
+				console.error("Channel is missing. Current props: ", JSON.parse(JSON.stringify(props)));
+				return null;
+			}
+
+			//Return our custom popout				Ends up being: `popout-APcvZm`
+			return BdApi.React.createElement("div", { className: className },
+				//Our tooltip
+				self.ChannelTooltip(channel),
+				//Get the threads we can access and sort them by most recent
+				useActiveThreads(channel)?.length ?
+					//Null check the threads and if present append them
+					children : null
+			);
+		}
+
+		//Patcher McPatcherson
+		BdApi.Patcher.after(config.info.id, ActiveThreadsPopout, "default", (thisObject, methodArguments, returnValue) => {
+			//Replace the type, i.e. patch the type
+			returnValue.type = PatchedThreadsPopout;
+			//Assign the props
+			Object.assign(returnValue.props, methodArguments[0]);
+		});
+
 		const TextChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("TextChannel", `.${this.containerDefault}`);
 
 		BdApi.Patcher.after(config.info.id, TextChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
@@ -226,67 +278,6 @@ class ChannelPermissions {
 
 		//For live (un)loading
 		VoiceChannel.forceUpdateAll();
-	}
-
-	patchThreadChannel() {
-		//Get our popout module we will patch
-		const ActiveThreadsPopout = BdApi.findModule(m => m?.default?.displayName === "ActiveThreadsPopout"),
-			//The stores we use to reference from
-			ThreadsStore = BdApi.findModuleByProps("getActiveUnjoinedThreadsForParent"),
-			GuildPermissions = BdApi.findModuleByProps("getGuildPermissions"),
-			//Our flux wraper
-			{ useStateFromStoresArray } = BdApi.findModuleByProps("useStateFromStoresArray"),
-			//Permission types for readability
-			permissionTypes = this.PermissionStore.Permissions,
-			//The functions are bound to somewhere else,
-			//so to avoid breaking other things, store `this`
-			self = this;
-
-
-		function useActiveThreads(channel) {
-			//We don't want accidental mishaps with voice channels
-			if (channel.isVocal())
-				return [];
-
-			//This is a react hook married with flux
-			//We use this to cache the stores and limit our resource consumption,
-			//also enables us to update without having to call a `forceUpdate` on the owner
-			//As a result it can then also store the result and only needs to rerun when the stores have changed
-			return useStateFromStoresArray([ThreadsStore, GuildPermissions], () => {
-				//Get all the threads of the current channel
-				return Object.values(ThreadsStore.getActiveUnjoinedThreadsForParent(channel.guild_id, channel.id))
-					//Filter those we cannot view
-					.filter(thread => GuildPermissions.can(permissionTypes.VIEW_CHANNEL, thread));
-			});
-		}
-
-		function PatchedThreadsPopout(props) {
-			//Get the neccessities from the props.
-			const { children, className, channel } = props;
-
-			if (!channel) {
-				console.error("Channel is missing. Current props: ", JSON.parse(JSON.stringify(props)));
-				return null;
-			}
-
-			//Return our custom popout				Ends up being: `popout-APcvZm`
-			return BdApi.React.createElement("div", { className: className },
-				//Our tooltip
-				self.ChannelTooltip(channel),
-				//Get the threads we can access and sort them by most recent
-				useActiveThreads(channel)?.length ?
-					//Null check the threads and if present append them
-					children : null
-			);
-		};
-
-		//Patcher McPatcherson
-		BdApi.Patcher.after(config.info.id, ActiveThreadsPopout, "default", (thisObject, methodArguments, returnValue) => {
-			//Replace the type, i.e. patch the type
-			returnValue.type = PatchedThreadsPopout;
-			//Assign the props
-			Object.assign(returnValue.props, methodArguments[0]);
-		});
 	}
 
 	/**
@@ -502,7 +493,8 @@ class ChannelPermissions {
 				//if not, simply return with a topic
 				return { topic: channel.topic };
 
-			const parentPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id)),
+			//ShowHiddenChannels plugin adds `_hidden` to certain IDs; needs will need to be removed.
+			const parentPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id.replace("_hidden", ""))),
 				channelPerms = this.getPermissionsOfChannel(channel);
 
 			//Return with topic and sync property
