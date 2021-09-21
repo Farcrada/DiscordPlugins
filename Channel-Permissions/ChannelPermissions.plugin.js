@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.2
+ * @version 4.0.3
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.2",
+		version: "4.0.3",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -302,7 +302,10 @@ class ChannelPermissions {
 			typeof (categorySynced) === "boolean" ?
 				BdApi.React.createElement("div", { className: config.constants.syncClass },
 					`${categorySynced ? "S" : "Not s"}ynced to category`) :
-				null,
+				typeof (categorySynced) === "string" ?
+					BdApi.React.createElement("div", { className: config.constants.syncClass },
+						`${categorySynced}`) :
+					null,
 
 			//Start with the channel topic;
 			//Check if it has a topic and regex-replace any breakage with nothing.
@@ -462,7 +465,7 @@ class ChannelPermissions {
 
 				if (user && member)
 					if (allowedPermission)
-						allowedElements["users"].push(this.createRoleElement(color, user.username));
+						allowedElements["users"].push(this.createRoleElement(color, user.username, member === myMember));
 					else if (deniedPermission)
 						deniedElements["users"].push(this.createRoleElement(color, user.username));
 			}
@@ -489,16 +492,24 @@ class ChannelPermissions {
 			return null;
 		else {
 			//Check if the channel is part of a category
-			if (!channel.parent_id)
-				//if not, simply return with a topic
-				return { topic: channel.topic };
+			if (channel.parent_id) {
+				//ShowHiddenChannels plugin adds `_hidden` to the parent ID if the "hidden"-categroy in settings is selected.
+				//This'll need to be handled.
+				if (channel.parent_id.includes("_hidden"))
+					return { topic: channel.topic, categorySynced: "Category unknown." };
 
-			//ShowHiddenChannels plugin adds `_hidden` to certain IDs; needs will need to be removed.
-			const parentPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id.replace("_hidden", ""))),
-				channelPerms = this.getPermissionsOfChannel(channel);
+				try {
+					const parentPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id)),
+						channelPerms = this.getPermissionsOfChannel(channel);
 
-			//Return with topic and sync property
-			return { topic: channel.topic, categorySynced: JSON.stringify(parentPerms) === JSON.stringify(channelPerms) };
+					//Return with topic and sync property
+					return { topic: channel.topic, categorySynced: JSON.stringify(parentPerms) === JSON.stringify(channelPerms) };
+				} catch (err) { console.error("getDetails() ran into an error when getting permissions of a channel.", channel, err); }
+
+			}
+
+			//if not, simply return with a topic
+			return { topic: channel.topic };
 		}
 	}
 
@@ -508,6 +519,10 @@ class ChannelPermissions {
 	 * @returns All permissions of that channel per role as an object
 	 */
 	getPermissionsOfChannel(channel) {
+		//Null check for any future issues.
+		if (!channel)
+			return new Error("Channel is null or undefined.");
+
 		//Store the overwrites of the channel
 		const channelOW = channel.permissionOverwrites,
 			//Get Discord's permissions
