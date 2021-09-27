@@ -502,7 +502,7 @@ class ChannelPermissions {
 					parentChannel = this.getChannel(this.getChannel(channel.id).parent_id)
 
 				try {
-					const parentPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id)),
+					const parentPerms = this.getPermissionsOfChannel(parentChannel),
 						channelPerms = this.getPermissionsOfChannel(channel);
 
 					//Return with topic and sync property
