@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.3
+ * @version 4.0.4
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.3",
+		version: "4.0.4",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -62,10 +62,15 @@ class ChannelPermissions {
 				if (!BdApi.Plugins.isEnabled("ZeresPluginLibrary"))
 					throw new Error("Failed to enable ZeresPluginLibrary.");
 
-				BdApi.alert("Could not enable or find ZeresPluginLibrary", "Could not start the plugin because ZeresPluginLibrary could not be found or enabled. Please enable and/or download it manually in your plugins folder.");
+				global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
 			}
 			catch (err) {
 				console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
+
+				BdApi.alert("Could not enable or find ZeresPluginLibrary",
+					"Could not start the plugin because ZeresPluginLibrary could not be found or enabled. Please enable and/or download it manually in your plugins folder.");
+
+				this.stop();
 			}
 		}
 	}
@@ -283,8 +288,8 @@ class ChannelPermissions {
 	/**
 	 * Constructs the tooltip itself
 	 * @param {object} channel The channel object
-	 * @param {boolean} [voice=false] Is the tooltip for avoice channel?
-	 * @returns React render object.
+	 * @param {boolean} [voice=false] Is the tooltip for a voice channel?
+	 * @returns React element to render
 	 */
 	ChannelTooltip(channel, voice = false) {
 		//Destructure all the elements from the specific channel
@@ -299,13 +304,10 @@ class ChannelPermissions {
 
 			//Check if the permissions of the channel are synced with the category
 			//If at all present, that is; We need to check it's type because null/undefined is not a boolean.
-			typeof (categorySynced) === "boolean" ?
+			typeof (categorySynced) === "string" ?
 				BdApi.React.createElement("div", { className: config.constants.syncClass },
-					`${categorySynced ? "S" : "Not s"}ynced to category`) :
-				typeof (categorySynced) === "string" ?
-					BdApi.React.createElement("div", { className: config.constants.syncClass },
-						`${categorySynced}`) :
-					null,
+					categorySynced) :
+				null,
 
 			//Start with the channel topic;
 			//Check if it has a topic and regex-replace any breakage with nothing.
@@ -325,7 +327,7 @@ class ChannelPermissions {
 	 * @param {string} type Type of section that is inside `elements`
 	 * @param {string} title Title for this section
 	 * @param {object} elements React elements to append under this title
-	 * @returns 
+	 * @returns React element to render
 	 */
 	createSection(type, title, elements) {
 		return elements[type] && elements[type].length > 0 ?
@@ -340,7 +342,7 @@ class ChannelPermissions {
 	 * Wrapper function for neatness
 	 * @param {object} allowedElements Object with `roles` and `users` properties that are allowed
 	 * @param {object} deniedElements Object with `roles` and `users` properties that are denied
-	 * @returns An array of React elements to render.
+	 * @returns An array of React elements to render
 	 */
 	createSections(allowedElements, deniedElements) {
 		return [
@@ -353,9 +355,9 @@ class ChannelPermissions {
 
 	/**
 	 * Creates a role element
-	 * @param {string[]} color Array made from an RGBA colors.
-	 * @param {string} name Name of the subject in this element.
-	 * @param {boolean} [self=false] Is this the user themselves?
+	 * @param {string[]} color Array made from an RGBA colors
+	 * @param {string} name Name of the subject in this element
+	 * @param {boolean} [self] Is this the user themselves?
 	 * @returns React element to render
 	 */
 	createRoleElement(color, name, self = false) {
@@ -493,21 +495,23 @@ class ChannelPermissions {
 		else {
 			//Check if the channel is part of a category
 			if (channel.parent_id) {
-				//ShowHiddenChannels plugin adds `_hidden` to the parent ID if the "hidden"-categroy in settings is selected.
+				//ShowHiddenChannels plugin overwrites the parent ID if the "hidden"-categroy in settings is selected.
 				//This'll need to be handled.
-				if (channel.parent_id.includes("_hidden"))
-					return { topic: channel.topic, categorySynced: "Category unknown." };
+				let parentChannel = this.getChannel(channel.parent_id);
+				if (!parentChannel)
+					parentChannel = this.getChannel(this.getChannel(channel.id).parent_id)
 
 				try {
 					const parentPerms = this.getPermissionsOfChannel(this.getChannel(channel.parent_id)),
 						channelPerms = this.getPermissionsOfChannel(channel);
 
 					//Return with topic and sync property
-					return { topic: channel.topic, categorySynced: JSON.stringify(parentPerms) === JSON.stringify(channelPerms) };
-				} catch (err) { console.error("getDetails() ran into an error when getting permissions of a channel.", channel, err); }
-
+					return { topic: channel.topic, categorySynced: `${JSON.stringify(parentPerms) === JSON.stringify(channelPerms) ? "S" : "Not s"}ynced to category` };
+				} catch (err) {
+					console.error("getDetails() ran into an error when getting permissions of a channel.", channel, err);
+					return { topic: channel.topic, categorySynced: "Category unknown." };
+				}
 			}
-
 			//if not, simply return with a topic
 			return { topic: channel.topic };
 		}
@@ -515,7 +519,7 @@ class ChannelPermissions {
 
 	/**
 	 * Gets every permission of a role concerning a given channel
-	 * @param {object} channel The channel to get permissions from.
+	 * @param {object} channel The channel to get permissions from
 	 * @returns All permissions of that channel per role as an object
 	 */
 	getPermissionsOfChannel(channel) {
@@ -569,11 +573,11 @@ class ChannelPermissions {
 	}
 
 	/**
-	 * Finds the value inside the `instance` object.
-	 * @param {object} instance The instance object to find in.
-	 * @param {string} searchkey What key we're searching for.
-	 * @param {boolean} getParentProperty Do we want the search's parent?
-	 * @returns The found object, if no matches are found, returns `undefined`.
+	 * Searches for the `searchKey` inside the `instance` object recursively
+	 * @param {object} instance The instance object to search in
+	 * @param {string} searchkey What key we're searching for
+	 * @param {boolean} [getParentProperty] Do we want the search's parent?
+	 * @returns The found object, if no matches are found, returns `undefined`
 	 */
 	findValue(instance, searchkey, getParentProperty = false) {
 		//Where to search
@@ -588,9 +592,9 @@ class ChannelPermissions {
 			contextSection: true
 		};
 
-		return getKey(instance, getParentProperty);
+		return getKey(instance);
 
-		function getKey(instance, getParentProperty) {
+		function getKey(instance) {
 			//In case the result is never filled, predefine it.
 			let result = undefined;
 			//Check if it exists
