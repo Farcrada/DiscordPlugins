@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.4
+ * @version 4.0.5
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.4",
+		version: "4.0.5",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -419,7 +419,7 @@ class ChannelPermissions {
 			//Check if the current permission type is a role
 			if (permissionRole) {
 				//Is there a color?
-				const color = role.colorString ?
+				const color = role?.colorString ?
 					//Convert it to our style
 					this.rgba2array(this.hex2rgb(role.colorString, config.constants.colorAlpha)) :
 					//Otherwise make it white
