@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.5
+ * @version 2.0.6
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.5",
+		version: "2.0.6",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -32,9 +32,6 @@ const config = {
 
 class HideChannels {
 	getName() { return config.info.name; }
-	getDescription() { return config.info.description; }
-	getVersion() { return config.info.version; }
-	getAuthor() { return config.info.author; }
 
 	load() {
 		if (!global.ZeresPluginLibrary) {
@@ -151,6 +148,8 @@ class HideChannels {
 					//Set the keybind and save it.
 					this.keybind = this.filterKeybind(e);
 					BdApi.saveData(config.info.id, "keybind", e);
+					//And the keybindSetting
+					this.keybindSetting = this.checkKeybindLoad(e);
 				}
 			}));
 	}
@@ -206,7 +205,7 @@ class HideChannels {
 	hideChannelComponent = () => {
 		//Only fetch the sidebar on a rerender.
 		const sidebarNode = document.querySelector(`.${this.sidebarClass}`),
-		//When a state updates, it rerenders.
+			//When a state updates, it rerenders.
 			[hidden, setHidden] = BdApi.React.useState(
 				//Check on a rerender where our side bar is so we can correctly reflect this.
 				sidebarNode.classList.contains(config.constants.hideElementsName) ?
