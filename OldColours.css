@@ -64,7 +64,6 @@ body {
   color: var(--brand-experiment-460);
   background: var(--brand-experiment-10a);
   text-decoration: none !important;
-  padding: 0 1px;
 }
 
 #app-mount .wrapper-3WhCwL:hover {
@@ -283,5 +282,3 @@ body {
 .attachButtonPlay-3iJ0mf {
   color: var(--old-green);
 }
-
-/* Import all the CSS files */
