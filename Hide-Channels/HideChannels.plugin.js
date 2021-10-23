@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.6
+ * @version 2.0.7
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.6",
+		version: "2.0.7",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -173,12 +173,11 @@ class HideChannels {
 
 		BdApi.Patcher.before(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
-			if (methodArguments[0]?.children)
-				//Along with that we need to check if what we're adding to is an array;
-				//because if not we'll render a button on the split view.
-				if (Array.isArray(methodArguments[0].children))
-					//And since we want to be on the most left of the header bar for style we unshift into the array.
-					methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
+			//Along with that we need to check if what we're adding to is an array;
+			//because if not we'll render a button on the split view.
+			if (Array.isArray(methodArguments[0]?.children))
+				//And since we want to be on the most left of the header bar for style we unshift into the array.
+				methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
 		});
 	}
 
@@ -208,7 +207,7 @@ class HideChannels {
 			//When a state updates, it rerenders.
 			[hidden, setHidden] = BdApi.React.useState(
 				//Check on a rerender where our side bar is so we can correctly reflect this.
-				sidebarNode.classList.contains(config.constants.hideElementsName) ?
+				sidebarNode?.classList.contains(config.constants.hideElementsName) ?
 					true : false);
 
 		//Keydown event
@@ -216,6 +215,7 @@ class HideChannels {
 			//Since we made this an object,
 			//we can make new propertire with `[]`
 			this.currentlyPressed[e.keyCode] = true;
+
 			//Account for bubbling and attach to the global: `window`
 		}, true, window);
 
@@ -228,6 +228,7 @@ class HideChannels {
 
 			//Current key goes up, so...
 			this.currentlyPressed[e.keyCode] = false;
+
 			//Account for bubbling and attach to the global: `window`
 		}, true, window);
 
@@ -250,6 +251,7 @@ class HideChannels {
 	 * @returns The passed state in reverse.
 	 */
 	toggleSidebar(sidebar) {
+
 		/**
 		 * @param {boolean} state State that determines the toggle.
 		 */
