@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.7
+ * @version 2.0.8
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.7",
+		version: "2.0.8",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -163,7 +163,7 @@ class HideChannels {
 		//And if there are remnants of css left,
 		//make sure we remove the class from the sidebar to ensure visual confirmation.
 		let sidebar = document.querySelector(`.${this.sidebarClass}`);
-		if (sidebar.classList.contains(config.constants.hideElementsName))
+		if (sidebar?.classList.contains(config.constants.hideElementsName))
 			sidebar.classList.remove(config.constants.hideElementsName);
 	}
 
@@ -259,10 +259,10 @@ class HideChannels {
 			//If it is showing, we need to hide it.
 			if (!state)
 				//We hide it through CSS by adding a class.
-				sidebar.classList.add(config.constants.hideElementsName);
+				sidebar?.classList.add(config.constants.hideElementsName);
 			//If it is hidden, we need to show it.
 			else
-				sidebar.classList.remove(config.constants.hideElementsName);
+				sidebar?.classList.remove(config.constants.hideElementsName);
 			return !state;
 		};
 	}
