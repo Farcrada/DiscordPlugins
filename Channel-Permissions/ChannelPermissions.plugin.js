@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.5
+ * @version 4.0.6
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.5",
+		version: "4.0.6",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -26,7 +26,8 @@ const config = {
 		channelTooltipClass: "FarcradaChannelTooltipClass",
 		syncClass: "FarcradaSyncClass",
 		topicClass: "FarcradaTopicClass",
-		colorAlpha: 0.6
+		colorAlpha: 0.6,
+		popoutDelay: 250
 	}
 }
 
@@ -100,7 +101,7 @@ class ChannelPermissions {
 			//Create and cache expensive `BdApi.findModule` calls.
 
 			//Lose/single classes
-			this.containerDefault = BdApi.findModuleByProps("containerDefault", "containerDragAfter").containerDefault;
+			this.containerDefault = BdApi.findModuleByProps("actionIcon", "containerDefault").containerDefault;
 
 			//Class collections
 			this.roleClasses = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
@@ -204,9 +205,34 @@ class ChannelPermissions {
 		const TextChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("TextChannel", `.${this.containerDefault}`);
 
 		BdApi.Patcher.after(config.info.id, TextChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
+			//Make sure we can choose our delays
+			//To do that we need to reconstruct
+			//the existing events with our own `popoutDelay`
+			const resetThreadPopoutTimers = function () {
+				clearTimeout(thisObject.enterTimer);
+				clearTimeout(thisObject.exitTimer)
+			},
+				mouseEnter = function () {
+					resetThreadPopoutTimers();
+					thisObject.enterTimer = setTimeout(function () {
+						thisObject.setState({
+							shouldShowThreadsPopout: !0
+						})
+					}, config.constants.popoutDelay);
+				},
+				mouseLeave = function () {
+					resetThreadPopoutTimers();
+					thisObject.exitTimer = setTimeout(function () {
+						thisObject.state.shouldShowThreadsPopout && thisObject.setState({
+							shouldShowThreadsPopout: !1
+						})
+					}, config.constants.popoutDelay);
+				};
+
+
 			//Transfer the events
-			returnValue.props.onMouseEnter = thisObject.handleMouseEnter;
-			returnValue.props.onMouseLeave = thisObject.handleMouseLeave;
+			returnValue.props.onMouseEnter = mouseEnter;
+			returnValue.props.onMouseLeave = mouseLeave;
 
 			//Show the popout
 			if (thisObject.state.shouldShowThreadsPopout)
@@ -251,7 +277,7 @@ class ChannelPermissions {
 				//Which is fairly annoying, considering my plugin.
 				thisObject.activitiesHideTimeout.stop();
 				//Start a new timer with a function that should return the given execution.
-				thisObject.activitiesHideTimeout.start(200, function () {
+				thisObject.activitiesHideTimeout.start(config.constants.popoutDelay, function () {
 					//Set the state back to true, meaning it shows.
 					return thisObject.setState({
 						shouldShowActivities: !0
@@ -263,7 +289,7 @@ class ChannelPermissions {
 				//That's where `stop()` comes in.
 				thisObject.activitiesHideTimeout.stop();
 				//Same as above, and the times reflect those of text channels.
-				thisObject.activitiesHideTimeout.start(250, function () {
+				thisObject.activitiesHideTimeout.start(config.constants.popoutDelay, function () {
 					//Set state back to false, meaning it hides.
 					return thisObject.setState({
 						shouldShowActivities: !1
@@ -278,7 +304,8 @@ class ChannelPermissions {
 			const props = this.findValue(returnValue, "renderPopout", true);
 			//Show the popout
 			if (thisObject.state.shouldShowActivities)
-				if (props) props.shouldShow = true;
+				if (props)
+					props.shouldShow = true;
 		});
 
 		//For live (un)loading
@@ -400,20 +427,17 @@ class ChannelPermissions {
 
 		//Loop through all the permissions by key
 		for (const roleID in channelOW) {
-			//Check if it's an ALLOWING permission via bitwise OR
+			//Check the type of permission (allowed or denied) for viewing or connecting
 			const allowedPermission = this.hasPermission(channelOW[roleID].allow, permissionTypes.VIEW_CHANNEL) ||
-				//For viewing or connecting
 				this.hasPermission(channelOW[roleID].allow, permissionTypes.CONNECT),
-				//Check if it's an DENYING permission via bitwise OR
 				deniedPermission = this.hasPermission(channelOW[roleID].deny, permissionTypes.VIEW_CHANNEL) ||
-					//For viewing or connecting
 					this.hasPermission(channelOW[roleID].deny, permissionTypes.CONNECT),
-				//Check the type of permission
+				//Check the type of permission (member or a role)
 				permissionRole = channelOW[roleID].type === permissionOverrideTypes.ROLE ||
 					overrideTypes[channelOW[roleID].type] === permissionOverrideTypes.ROLE,
-				//Same but for a single member.
 				permissionMember = channelOW[roleID].type === permissionOverrideTypes.MEMBER ||
 					overrideTypes[channelOW[roleID].type] === permissionOverrideTypes.MEMBER,
+				//Store the current role.
 				role = guildRoles[roleID];
 
 			//Check if the current permission type is a role
@@ -538,15 +562,14 @@ class ChannelPermissions {
 		//Loop through all the permissions by key
 		for (const roleID in channelOW) {
 			for (const permType in permissionTypes) {
-				//Check if the permission is allowed via bitwise AND
+				//Check the type of permission (allowed or denied)
 				const permAllowed = this.hasPermission(channelOW[roleID].allow, permissionTypes[permType]),
-					//Check if the permission is denied via bitwise AND
 					permDenied = this.hasPermission(channelOW[roleID].deny, permissionTypes[permType]);
 
 				//The predefining too early generates undesirable results.
 				if ((permAllowed || permDenied) && !permissionObject[roleID]) {
 					permissionObject[roleID] = {};
-					permissionObject[roleID].name = this.getGuild(channel.guild_id).roles[roleID]?.name;
+					permissionObject[roleID].name = this.getGuild(channel.guild_id)?.roles[roleID]?.name;
 				}
 
 				//Sort the types between allowed and denied
