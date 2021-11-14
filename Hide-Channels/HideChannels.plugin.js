@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.8
+ * @version 2.0.9
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.8",
+		version: "2.0.9",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -31,7 +31,9 @@ const config = {
 
 
 class HideChannels {
+
 	getName() { return config.info.name; }
+
 
 	load() {
 		if (!global.ZeresPluginLibrary) {
@@ -176,8 +178,10 @@ class HideChannels {
 			//Along with that we need to check if what we're adding to is an array;
 			//because if not we'll render a button on the split view.
 			if (Array.isArray(methodArguments[0]?.children))
-				//And since we want to be on the most left of the header bar for style we unshift into the array.
-				methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent));
+				//Make sure our component isn't already present.
+				if (methodArguments[0].children[0]?.key !== config.info.id)
+					//And since we want to be on the most left of the header bar for style we unshift into the array.
+					methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent, { key: config.info.id }));
 		});
 	}
 
@@ -237,7 +241,7 @@ class HideChannels {
 			//Styling
 			id: config.constants.buttonID,
 			//To identify our object
-			key: config.info.id,
+			key: "hideChannelComponent",
 			//The icon
 			className: hidden ? config.constants.buttonHidden : config.constants.buttonVisible,
 			//Toggle the sidebar and rerender on toggle; change the state.
