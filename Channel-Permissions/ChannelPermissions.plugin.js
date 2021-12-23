@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.6
+ * @version 4.0.7
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -16,7 +16,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.6",
+		version: "4.0.7",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -35,6 +35,7 @@ const config = {
 class ChannelPermissions {
 	//I like my spaces. 
 	getName() { return config.info.name; }
+
 
 	load() {
 		if (!global.ZeresPluginLibrary) {
@@ -70,8 +71,6 @@ class ChannelPermissions {
 
 				BdApi.alert("Could not enable or find ZeresPluginLibrary",
 					"Could not start the plugin because ZeresPluginLibrary could not be found or enabled. Please enable and/or download it manually in your plugins folder.");
-
-				this.stop();
 			}
 		}
 	}
@@ -459,7 +458,7 @@ class ChannelPermissions {
 					//And if it's not just @everyone role
 					if (role?.name !== "@everyone")
 						//Create the element and push it through to the Allowed array
-						allowedElements["roles"].push(this.createRoleElement(color, role.name, myMember.roles.includes(roleID)));
+						allowedElements["roles"].push(this.createRoleElement(color, role.name, myMember?.roles.includes(roleID)));
 				}
 				else if (deniedPermission) {
 					//If @everyone is denied set the variable to represent this.
