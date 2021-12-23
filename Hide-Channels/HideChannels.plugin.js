@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.0.9
+ * @version 2.1.0
  * @description Hide channel list from view.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.0.9",
+		version: "2.1.0",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -177,27 +177,15 @@ class HideChannels {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array;
 			//because if not we'll render a button on the split view.
-			if (Array.isArray(methodArguments[0]?.children))
-				//Make sure our component isn't already present.
-				if (methodArguments[0].children[0]?.key !== config.info.id)
-					//And since we want to be on the most left of the header bar for style we unshift into the array.
-					methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent, { key: config.info.id }));
-		});
-	}
 
-	/**
-	 * Use this to make a despensable easy to use listener with React.
-	 * @param {string} event The name of the event to listen for.
-	 * @param {callback} callback Function to call when said event is triggered.
-	 * @param {boolean} bubbling Handle bubbling or not
-	 * @param {object} [target] The object to attach our listener to.
-	 */
-	useListener(event, callback, bubbling, target = document) {
-		BdApi.React.useEffect(() => {
-			//ComponentDidMount
-			target.addEventListener(event, callback, bubbling);
-			//ComponentWillUnmount
-			return () => target.removeEventListener(event, callback, bubbling);
+			//Also: Prevent thread button appearing with this first line.
+			if (methodArguments[0]?.["aria-label"])
+				if (Array.isArray(methodArguments[0]?.children))
+					//Make sure our component isn't already present.
+					if (methodArguments[0].children[0]?.key !== config.info.id)
+						//And since we want to be on the most left of the header bar for style we unshift into the array.
+						methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent, { key: config.info.id }));
+
 		});
 	}
 
@@ -214,8 +202,46 @@ class HideChannels {
 				sidebarNode?.classList.contains(config.constants.hideElementsName) ?
 					true : false);
 
+		/**
+		 * Use this to make a despensable easy to use listener with React.
+		 * @param {string} eventName The name of the event to listen for.
+		 * @param {callback} callback Function to call when said event is triggered.
+		 * @param {boolean} bubbling Handle bubbling or not
+		 * @param {object} [target] The object to attach our listener to.
+		 */
+		function useListener(eventName, callback, bubbling, target = document) {
+			BdApi.React.useEffect(() => {
+				//ComponentDidMount
+				target.addEventListener(eventName, callback, bubbling);
+				//ComponentWillUnmount
+				return () => target.removeEventListener(eventName, callback, bubbling);
+			});
+		}
+
+		/**
+		 * Adds and removes our CSS to make our sidebar appear and disappear.
+		 * @param {Node} sidebar Sidebar node we want to toggle.
+		 * @returns The passed state in reverse.
+		 */
+		function toggleSidebar(sidebar) {
+
+			/**
+			 * @param {boolean} state State that determines the toggle.
+			 */
+			return state => {
+				//If it is showing, we need to hide it.
+				if (!state)
+					//We hide it through CSS by adding a class.
+					sidebar?.classList.add(config.constants.hideElementsName);
+				//If it is hidden, we need to show it.
+				else
+					sidebar?.classList.remove(config.constants.hideElementsName);
+				return !state;
+			};
+		}
+
 		//Keydown event
-		this.useListener("keydown", e => {
+		useListener("keydown", e => {
 			//Since we made this an object,
 			//we can make new propertire with `[]`
 			this.currentlyPressed[e.keyCode] = true;
@@ -224,11 +250,11 @@ class HideChannels {
 		}, true, window);
 
 		//Keyup event
-		this.useListener("keyup", e => {
+		useListener("keyup", e => {
 			//Check if every currentlyPessed is in our saved keybind.
 			if (this.keybind.every(key => this.currentlyPressed[key] === true))
 				//Toggle the sidebar and rerender on toggle; change the state
-				setHidden(this.toggleSidebar(sidebarNode));
+				setHidden(toggleSidebar(sidebarNode));
 
 			//Current key goes up, so...
 			this.currentlyPressed[e.keyCode] = false;
@@ -245,30 +271,8 @@ class HideChannels {
 			//The icon
 			className: hidden ? config.constants.buttonHidden : config.constants.buttonVisible,
 			//Toggle the sidebar and rerender on toggle; change the state.
-			onClick: () => setHidden(this.toggleSidebar(sidebarNode))
+			onClick: () => setHidden(toggleSidebar(sidebarNode))
 		});
-	}
-
-	/**
-	 * Adds and removes our CSS to make our sidebar appear and disappear.
-	 * @param {Node} sidebar Sidebar node we want to toggle.
-	 * @returns The passed state in reverse.
-	 */
-	toggleSidebar(sidebar) {
-
-		/**
-		 * @param {boolean} state State that determines the toggle.
-		 */
-		return state => {
-			//If it is showing, we need to hide it.
-			if (!state)
-				//We hide it through CSS by adding a class.
-				sidebar?.classList.add(config.constants.hideElementsName);
-			//If it is hidden, we need to show it.
-			else
-				sidebar?.classList.remove(config.constants.hideElementsName);
-			return !state;
-		};
 	}
 
 	/**
@@ -280,13 +284,13 @@ class HideChannels {
 	checkKeybindLoad(keybindToLoad, defaultKeybind = [[0, 162], [0, 72]]) {
 		if (!keybindToLoad)
 			return defaultKeybind;
-		for (const keybind of keybindToLoad) {
-			if (Array.isArray(keybind)) {
-				for (const key of keybind)
-					if (typeof (key) !== "number")
+		for (const key of keybindToLoad) {
+			if (Array.isArray(key)) {
+				for (const keyCode of key)
+					if (typeof (keyCode) !== "number")
 						return defaultKeybind;
 			}
-			else if (typeof (keybind) !== "number")
+			else if (typeof (key) !== "number")
 				return defaultKeybind;
 
 		}
