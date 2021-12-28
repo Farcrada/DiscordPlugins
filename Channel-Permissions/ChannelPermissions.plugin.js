@@ -602,52 +602,53 @@ class ChannelPermissions {
 	 * @returns The found object, if no matches are found, returns `undefined`
 	 */
 	findValue(instance, searchkey, getParentProperty = false) {
-		//Where to search
-		let whitelist = {
-			props: true,
-			children: true,
-			child: true,
-			sibling: true
-		};
-		//Where not to search
-		let blacklist = {
-			contextSection: true
-		};
+	    //Where to search
+	    const whitelist = {
+		props: true,
+		children: true,
+		child: true,
+		sibling: true,
+	    }
+	    //Where not to search
+	    const blacklist = {
+		contextSection: true,
+	    }
 
-		return getKey(instance);
+	    return getKey(instance)
 
-		function getKey(instance) {
-			//In case the result is never filled, predefine it.
-			let result = undefined;
-			//Check if it exists
-			if (instance && !Node.prototype.isPrototypeOf(instance)) {
-				//Filter inherited properties
-				let keys = Object.getOwnPropertyNames(instance);
-				//As long as result is undefined and within keys.length; loop
-				for (let i = 0; result === undefined && i < keys.length; i++) {
-					let key = keys[i];
+	    function getKey(instance) {
+		//In case the result is never filled, predefine it.
+		let result = undefined
+		//Check if it exists
+		if (!instance || Node.prototype.isPrototypeOf(instance)) return result
+		//Filter inherited properties
+		const keys = Object.getOwnPropertyNames(instance)
+		//As long as result is undefined and within keys.length; loop
+		for (let i = 0; result === undefined && i < keys.length; i++) {
+		    let key = keys[i]
 
-					//Make sure the property's not blacklisted
-					if (key && !blacklist[key]) {
-						//Cache value
-						let value = instance[key];
+		    //Make sure the property's not blacklisted
+		    if (key && blacklist[key]) continue
 
-						//if this is the key we're looking for, return it
-						if (searchkey === key)
-							//But if we want the property itself
-							if (getParentProperty)
-								//return the instance itself.
-								return instance;
-							else
-								return value;
+		    //Cache value
+		    const value = instance[key]
 
-						//If it's an object or function (and thus searchable) and it is whitelisted
-						else if ((typeof value === "object" || typeof value === "function") && whitelist[key])
-							result = getKey(value);
-					}
-				}
-			}
-			return result;
+		    //if this is the key we're looking for, return it
+		    if (searchkey === key) {
+			if (getParentProperty)
+			    //But if we want the property itself
+			    //return the instance itself.
+			    return instance
+			return value
+		    }
+		    //If it's an object or function (and thus searchable) and it is whitelisted
+		    else if (
+			['object', 'function'].includes(typeof value) &&
+			whitelist[key]
+		    )
+			result = getKey(value)
 		}
+	    }
 	}
+
 }
