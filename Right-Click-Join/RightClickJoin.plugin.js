@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.3.0
+ * @version 1.3.1
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -15,7 +15,7 @@ const config = {
 		name: "Right Click Join",
 		id: "RightClickJoin",
 		description: "Right click a user to join a voice channel they are in.",
-		version: "1.3.0",
+		version: "1.3.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
 	}
@@ -76,6 +76,7 @@ class RightClickJoin {
 			this.getVoiceStatesForChannel = BdApi.findModuleByProps("getAllVoiceStates", "getVoiceStatesForChannel").getVoiceStatesForChannel;
 			this.getChannels = BdApi.findModuleByProps("getChannels", "getDefaultChannel").getChannels;
 			this.selectVoiceChannel = BdApi.findModuleByProps("selectChannel").selectVoiceChannel;
+			this.Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
 			this.fetchProfile = BdApi.findModuleByProps("fetchProfile").fetchProfile;
 
 			this.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
@@ -84,9 +85,6 @@ class RightClickJoin {
 			//Context controls (mainly just the one item we insert)
 			this.MenuItem = BdApi.findModuleByProps("MenuRadioItem", "MenuItem").MenuItem;
 
-
-			//New way to patch context menu's
-			this.patchLazyOpener();
 
 			//Patch the guild context menu
 			this.patchGuildChannelUserContextMenu();
@@ -109,7 +107,7 @@ class RightClickJoin {
 
 	//Patch in our context item when in a guild
 	async patchGuildChannelUserContextMenu() {
-		const GuildUserContextMenu = await this.getDiscordMenu(m => m.displayName === "GuildChannelUserContextMenu");
+		const GuildUserContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "GuildChannelUserContextMenu");
 
 		BdApi.Patcher.after(config.info.id, GuildUserContextMenu, "default", (thisObject, methodArguments, returnValue) => {
 			this.rightClickJoinMagic(methodArguments[0], this.indexObject.GUILD, returnValue, true);
@@ -118,60 +116,10 @@ class RightClickJoin {
 
 	//Patch in our context item when in the DMs
 	async patchDMUserContextMenu() {
-		const DMUserContextMenu = await this.getDiscordMenu(m => m.displayName === "DMUserContextMenu");
+		const DMUserContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "DMUserContextMenu");
 
 		BdApi.Patcher.after(config.info.id, DMUserContextMenu, "default", (thisObject, methodArguments, returnValue) => {
 			this.rightClickJoinMagic(methodArguments[0], this.indexObject.DM, returnValue);
-		});
-	}
-
-	getDiscordMenu(filter) {
-		const directMatch = BdApi.findModule(m => m.default && filter(m.default));
-
-		if (directMatch)
-			return Promise.resolve(directMatch);
-
-		return new Promise(resolve => {
-			const listener = () => {
-				const match = BdApi.findModule(m => m.default && filter(m.default));
-				if (!match) return;
-
-				this.contextMenuListeners.delete(listener);
-				return resolve(match);
-			};
-
-			this.contextMenuListeners.add(listener);
-		});
-	}
-
-	patchLazyOpener() {
-		this.contextMenuListeners = new Set();
-
-		const ContextMenuActions = BdApi.findModuleByProps("openContextMenu");
-
-		BdApi.Patcher.before(config.info.id, ContextMenuActions, "openContextMenuLazy", (_, methodArguments) => {
-			const originalRender = methodArguments[1];
-
-			if (typeof (originalRender) !== "function")
-				return;
-
-			methodArguments[1] = (...args) => {
-				const menuPromise = Reflect.apply(originalRender, null, args);
-
-				return menuPromise.then(render => {
-					const listeners = [...this.contextMenuListeners];
-
-					for (let i = 0; i < listeners.length; i++) {
-						const listener = listeners[i];
-						try { listener(); }
-						catch (e) {
-							console.error("Lazy Context Pacth", "Failed to patch:", e);
-						}
-					}
-
-					return render;
-				});
-			}
 		});
 	}
 
@@ -211,8 +159,16 @@ class RightClickJoin {
 			if (this.MutualStore.isFetching(userId))
 				return;
 
-			//Fetch and then we need to fill "mutualGuilds" again, so we just pass the call
-			this.fetchProfile(userId).then(() => { checkAndAddItem(this.MutualStore.getMutualGuilds(userId)); });
+			this.Dispatcher.wait(() => {
+				//Fetch and then we need to fill "mutualGuilds" again, so we just pass the call
+				this.fetchProfile(userId)
+					.then(() => {
+						checkAndAddItem(this.MutualStore.getMutualGuilds(userId));
+					})
+					.catch(error => {
+						if (~error?.message?.indexOf("Already dispatching")) return;
+					});
+			});
 		}
 		else
 			checkAndAddItem(mutualGuilds);
