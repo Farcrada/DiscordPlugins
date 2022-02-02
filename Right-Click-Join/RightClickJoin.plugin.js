@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.3.1
+ * @version 1.3.2
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -14,8 +14,9 @@ const config = {
 	info: {
 		name: "Right Click Join",
 		id: "RightClickJoin",
+		menuID: "right-click-join",
 		description: "Right click a user to join a voice channel they are in.",
-		version: "1.3.1",
+		version: "1.3.2",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
 	}
@@ -68,8 +69,9 @@ class RightClickJoin {
 	start() {
 		try {
 			this.indexObject = {
-				DM: { section: 2, child: 1 },
-				GUILD: { section: 1, child: 3 }
+				DM: { section: 2, item: 1 },
+				GUILD: { section: 1, item: 3 },
+				GENERIC: { section: 1, item: 2 }
 			}
 
 			//Specific functions we need, nothing like a big module
@@ -88,8 +90,10 @@ class RightClickJoin {
 
 			//Patch the guild context menu
 			this.patchGuildChannelUserContextMenu();
-			//And since it would be handy to join from a DM, it's approached differently.
+			//Also since it would be handy to join from a DM, it's approached differently.
 			this.patchDMUserContextMenu();
+			//And to join from the friends tab:
+			this.patchUserGenericContextMenu();
 		}
 		catch (err) {
 			try {
@@ -105,7 +109,6 @@ class RightClickJoin {
 	stop() { BdApi.Patcher.unpatchAll(config.info.id); }
 
 
-	//Patch in our context item when in a guild
 	async patchGuildChannelUserContextMenu() {
 		const GuildUserContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "GuildChannelUserContextMenu");
 
@@ -114,12 +117,19 @@ class RightClickJoin {
 		});
 	}
 
-	//Patch in our context item when in the DMs
 	async patchDMUserContextMenu() {
 		const DMUserContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "DMUserContextMenu");
 
 		BdApi.Patcher.after(config.info.id, DMUserContextMenu, "default", (thisObject, methodArguments, returnValue) => {
 			this.rightClickJoinMagic(methodArguments[0], this.indexObject.DM, returnValue);
+		});
+	}
+
+	async patchUserGenericContextMenu() {
+		const UserGenericContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "UserGenericContextMenu");
+
+		BdApi.Patcher.after(config.info.id, UserGenericContextMenu, "default", (thisObject, methodArguments, returnValue) => {
+			this.rightClickJoinMagic(methodArguments[0], this.indexObject.GENERIC, returnValue);
 		});
 	}
 
@@ -187,26 +197,30 @@ class RightClickJoin {
 				if (participants[id].userId === userId)
 					return channelId;
 		}
-		//Return false so our DM patch knows what to do.
-		return false;
+		//If nothing, return null.
+		return null;
 	}
 
 	constructMenuItem(returnValue, indexObject, channelId) {
-		//Splice and insert our context item
-		//                the menu,    the sections,               the items of this section
-		returnValue?.props?.children?.props?.children[indexObject.section]?.props?.children?.splice(
-			//We want it after the "call" option.
-			indexObject.child,
-			0,
-			BdApi.React.createElement(this.MenuItem, {
-				//Discord Is One Of Those
-				label: "Join Call",
-				id: config.info.name.toLowerCase().replace(' ', '-'),
-				action: () => {
-					//Joining a voicechannel
-					this.selectVoiceChannel(channelId);
-				}
-			})
-		);
+		//                                 the menu,              the sections,                   the items of this section
+		let sectionItems = returnValue?.props?.children?.props?.children[indexObject.section]?.props?.children;
+
+		if (sectionItems)
+			if (!sectionItems.find(item => item?.props?.id === config.info.menuID))
+				//Splice and insert our context item
+				sectionItems.splice(
+					//We want it after the "call" option.
+					indexObject.item,
+					0,
+					BdApi.React.createElement(this.MenuItem, {
+						//Discord Is One Of Those
+						label: "Join Call",
+						id: config.info.menuID,
+						action: () => {
+							//Joining a voicechannel
+							this.selectVoiceChannel(channelId);
+						}
+					})
+				);
 	}
 }
