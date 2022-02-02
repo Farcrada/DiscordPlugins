@@ -83,7 +83,7 @@ class DoubleClickToEdit {
 			return;
 
 		//Basically make a HTMLElement/Node interactable with it's React components.
-		let instance = BdApi.getInternalInstance(messagediv);
+		const instance = BdApi.getInternalInstance(messagediv);
 		//Mandatory nullcheck
 		if (!instance)
 			return;
@@ -91,14 +91,14 @@ class DoubleClickToEdit {
 
 		//This is filled with the message top to bottom,
 		//if it has a quote the quote will be "message".
-		let message = this.getValueFromKey(instance, "message");
+		const message = this.getValueFromKey(instance, "message"),
 		//As a result, this will be the actual message you want to edit.
-		let baseMessage = this.getValueFromKey(instance, "baseMessage");
+			baseMessage = this.getValueFromKey(instance, "baseMessage"),
 
 		//Check if the quote or standalone message is yours.
-		let msgYours = this.messageYours(message, this.CurrentUserStore.getCurrentUser().id);
+			msgYours = this.messageYours(message, this.CurrentUserStore.getCurrentUser().id),
 		//If double clicked a message with a quote, check if the "base"-message is yours.
-		let baseMsgYours = this.messageYours(baseMessage, this.CurrentUserStore.getCurrentUser().id);
+			baseMsgYours = this.messageYours(baseMessage, this.CurrentUserStore.getCurrentUser().id);
 
 		//Message(/quote) isn't yours
 		if (!msgYours) {
@@ -136,7 +136,7 @@ class DoubleClickToEdit {
 
 	getValueFromKey(instance, searchkey) {
 		//Where we want to search.
-		let whitelist = {
+		const whitelist = {
 			memoizedProps: true,
 			child: true,
 			sibling: true
@@ -150,15 +150,15 @@ class DoubleClickToEdit {
 			//Make sure it exists and isn't a "paradox".
 			if (instance && !Node.prototype.isPrototypeOf(instance)) {
 				//Get our own keys
-				let keys = Object.getOwnPropertyNames(instance);
+				const keys = Object.getOwnPropertyNames(instance);
 				//As long as we don't have a result, lets go through.
 				for (let i = 0; result === undefined && i < keys.length; i++) {
 					//Store our key for readability
-					let key = keys[i];
+					const key = keys[i];
 					//Check if there is a key
 					if (key) {
 						//Store the value
-						let value = instance[key];
+						const value = instance[key];
 						//Is our key what we want?
 						if (searchkey === key)
 							result = value;
