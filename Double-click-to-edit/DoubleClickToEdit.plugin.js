@@ -1,7 +1,7 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.2.3
+ * @version 9.2.4
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
@@ -15,7 +15,7 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.2.3",
+		version: "9.2.4",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
@@ -69,7 +69,7 @@ class DoubleClickToEdit {
 	}
 
 	handler(e) {
-		//Check if we're not double clicking a video:
+		//Check if we're not double clicking a video
 		if (e.target.className.startsWith("video"))
 			return;
 
@@ -91,13 +91,13 @@ class DoubleClickToEdit {
 
 		//This is filled with the message top to bottom,
 		//if it has a quote the quote will be "message".
-		const message = this.getValueFromKey(instance, "message"),
+		let message = this.getValueFromKey(instance, "message");
 		//As a result, this will be the actual message you want to edit.
-			baseMessage = this.getValueFromKey(instance, "baseMessage"),
+		const baseMessage = this.getValueFromKey(instance, "baseMessage"),
 
-		//Check if the quote or standalone message is yours.
+			//Check if the quote or standalone message is yours.
 			msgYours = this.messageYours(message, this.CurrentUserStore.getCurrentUser().id),
-		//If double clicked a message with a quote, check if the "base"-message is yours.
+			//If double clicked a message with a quote, check if the "base"-message is yours.
 			baseMsgYours = this.messageYours(baseMessage, this.CurrentUserStore.getCurrentUser().id);
 
 		//Message(/quote) isn't yours
