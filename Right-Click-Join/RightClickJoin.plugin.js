@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.3.2
+ * @version 1.4.0
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -16,7 +16,7 @@ const config = {
 		id: "RightClickJoin",
 		menuID: "right-click-join",
 		description: "Right click a user to join a voice channel they are in.",
-		version: "1.3.2",
+		version: "1.4.0",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
 	}
@@ -68,32 +68,21 @@ class RightClickJoin {
 
 	start() {
 		try {
-			this.indexObject = {
-				DM: { section: 2, item: 1 },
-				GUILD: { section: 1, item: 3 },
-				GENERIC: { section: 1, item: 2 }
-			}
-
 			//Specific functions we need, nothing like a big module
 			this.getVoiceStatesForChannel = BdApi.findModuleByProps("getAllVoiceStates", "getVoiceStatesForChannel").getVoiceStatesForChannel;
 			this.getChannels = BdApi.findModuleByProps("getChannels", "getDefaultChannel").getChannels;
 			this.selectVoiceChannel = BdApi.findModuleByProps("selectChannel").selectVoiceChannel;
-			this.Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
 			this.fetchProfile = BdApi.findModuleByProps("fetchProfile").fetchProfile;
+			this.useStateFromStores = BdApi.findModuleByProps("useStateFromStores").useStateFromStores;
 
-			this.ChannelStore = BdApi.findModuleByProps("getChannel", "getDMFromUserId");
+			this.Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
 			this.MutualStore = BdApi.findModuleByProps("isFetching", "getUserProfile");
 
 			//Context controls (mainly just the one item we insert)
-			this.MenuItem = BdApi.findModuleByProps("MenuRadioItem", "MenuItem").MenuItem;
+			this.MenuStore = BdApi.findModuleByProps("MenuRadioItem", "MenuItem");
 
-
-			//Patch the guild context menu
-			this.patchGuildChannelUserContextMenu();
-			//Also since it would be handy to join from a DM, it's approached differently.
-			this.patchDMUserContextMenu();
-			//And to join from the friends tab:
-			this.patchUserGenericContextMenu();
+			//Thanks Discord
+			this.patchCallUserItem();
 		}
 		catch (err) {
 			try {
@@ -109,79 +98,59 @@ class RightClickJoin {
 	stop() { BdApi.Patcher.unpatchAll(config.info.id); }
 
 
-	async patchGuildChannelUserContextMenu() {
-		const GuildUserContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "GuildChannelUserContextMenu");
+	async patchCallUserItem() {
+		const CallUserItem = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu("useCallUserItem");
 
-		BdApi.Patcher.after(config.info.id, GuildUserContextMenu, "default", (thisObject, methodArguments, returnValue) => {
-			this.rightClickJoinMagic(methodArguments[0], this.indexObject.GUILD, returnValue, true);
-		});
-	}
-
-	async patchDMUserContextMenu() {
-		const DMUserContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "DMUserContextMenu");
-
-		BdApi.Patcher.after(config.info.id, DMUserContextMenu, "default", (thisObject, methodArguments, returnValue) => {
-			this.rightClickJoinMagic(methodArguments[0], this.indexObject.DM, returnValue);
-		});
-	}
-
-	async patchUserGenericContextMenu() {
-		const UserGenericContextMenu = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu(m => m.displayName === "UserGenericContextMenu");
-
-		BdApi.Patcher.after(config.info.id, UserGenericContextMenu, "default", (thisObject, methodArguments, returnValue) => {
-			this.rightClickJoinMagic(methodArguments[0], this.indexObject.GENERIC, returnValue);
+		BdApi.Patcher.after(config.info.id, CallUserItem, "default", (thisObject, methodArguments, returnValue) => {
+			return [
+				this.rightClickJoinMagic(methodArguments[0]),
+				returnValue
+			];
 		});
 	}
 
 
-	rightClickJoinMagic(props, indexObject, returnValue, guild = false) {
-		if (guild) {
-			//Get the channel object.
-			const channel = this.ChannelStore.getChannel(props.channelId);
-			if (channel.isVocal()) {
-				//If we right click a channel in that guild, we can mitigate our intense searching.
-				this.constructMenuItem(returnValue, indexObject, channel.id);
-				//And return here to prevent duplicates
-				return;
-			}
-		}
-
+	rightClickJoinMagic(props) {
 		//Now we gotta check mutual guilds to see if we match anything
-		const userId = props.user.id,
-			mutualGuilds = this.MutualStore.getMutualGuilds(userId) ?? [],
+		const mutualGuilds = this.useStateFromStores([this.MutualStore], () => this.MutualStore.getMutualGuilds(props.id) ?? []),
 			checkAndAddItem = (_mutualGuilds = []) => {
 				//So we need a loop through if there's many
 				for (let i = 0; i < _mutualGuilds.length; i++) {
-					const matchedChannelId = this.checkVoiceForId(this.getChannels(_mutualGuilds[i].guild.id).VOCAL, userId);
-					if (matchedChannelId) {
-						this.constructMenuItem(returnValue, indexObject, matchedChannelId);
+					const matchedChannelId = this.checkVoiceForId(this.getChannels(_mutualGuilds[i].guild.id).VOCAL, props.id);
+					if (matchedChannelId)
 						//We need to have a way to break early if we find anything,
 						//to reduce resource consumption.
 						//You can only be connected to one voicechannel anyway
-
-						break;
-					}
+						return BdApi.React.createElement(this.MenuStore.MenuItem, {
+							//Discord Is One Of Those
+							label: "Join Call",
+							id: config.info.menuID,
+							action: () => {
+								//Joining a voicechannel
+								this.selectVoiceChannel(matchedChannelId);
+							}
+						})
 				}
 			};
 
 		if (mutualGuilds.length < 1) {
 			//Gotta make sure we're not fetching already (or risk spamming the API)
-			if (this.MutualStore.isFetching(userId))
-				return;
+			if (this.MutualStore.isFetching(props.id))
+				return null;
 
 			this.Dispatcher.wait(() => {
 				//Fetch and then we need to fill "mutualGuilds" again, so we just pass the call
-				this.fetchProfile(userId)
+				this.fetchProfile(props.id)
 					.then(() => {
-						checkAndAddItem(this.MutualStore.getMutualGuilds(userId));
+						return checkAndAddItem(this.MutualStore.getMutualGuilds(props.id) ?? []);
 					})
 					.catch(error => {
-						if (~error?.message?.indexOf("Already dispatching")) return;
+						if (~error?.message?.indexOf("Already dispatching")) return null;
 					});
 			});
 		}
 		else
-			checkAndAddItem(mutualGuilds);
+			return checkAndAddItem(mutualGuilds);
 	}
 
 	checkVoiceForId(voiceChannels, userId) {
@@ -199,28 +168,5 @@ class RightClickJoin {
 		}
 		//If nothing, return null.
 		return null;
-	}
-
-	constructMenuItem(returnValue, indexObject, channelId) {
-		//                                 the menu,              the sections,                   the items of this section
-		let sectionItems = returnValue?.props?.children?.props?.children[indexObject.section]?.props?.children;
-
-		if (sectionItems)
-			if (!sectionItems.find(item => item?.props?.id === config.info.menuID))
-				//Splice and insert our context item
-				sectionItems.splice(
-					//We want it after the "call" option.
-					indexObject.item,
-					0,
-					BdApi.React.createElement(this.MenuItem, {
-						//Discord Is One Of Those
-						label: "Join Call",
-						id: config.info.menuID,
-						action: () => {
-							//Joining a voicechannel
-							this.selectVoiceChannel(channelId);
-						}
-					})
-				);
 	}
 }
