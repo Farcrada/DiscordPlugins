@@ -1,7 +1,7 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.3.1
+ * @version 9.3.2
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
@@ -15,7 +15,7 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.1",
+		version: "9.3.2",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
@@ -131,48 +131,18 @@ class DoubleClickToEdit {
 			return;
 
 
-		//This is filled with the message top to bottom,
-		//if it has a quote the quote will be "message".
-		let message = this.getValueFromKey(instance, "message");
-		//As a result, this will be the actual message you want to edit.
-		const baseMessage = this.getValueFromKey(instance, "baseMessage"),
+		//The message instance is filled top to bottom, as it is in view.
+		//As a result, "baseMessage" will be the actual message you want to address. And "message" will be the reply.
+		//Maybe the message has a reply, so check if "baseMessage" exists and otherwise fallback on "message".
+		const message = this.getValueFromKey(instance, "baseMessage") ?? this.getValueFromKey(instance, "message");
 
-			//Check if the quote or standalone message is yours.
-			msgYours = this.isMessageYours(message, this.CurrentUserStore.getCurrentUser().id),
-			//If double clicked a message with a quote, check if the "base"-message is yours.
-			baseMsgYours = this.isMessageYours(baseMessage, this.CurrentUserStore.getCurrentUser().id);
-
-		//Message(/quote) is yours
-		if (msgYours) {
-			//Maybe it is a quote, so check the base message (if it exists)
-			if (baseMsgYours)
-				message = baseMessage;
-			//This can also be "undefined", so a simple !baseMsgYours is not gonna work.
-			else if (baseMsgYours == false)
-				return this.doubleClickToReplySetting ? this.replyToMessage(this.getChannel(message.channel_id), message, e) : null;
-		}
-		//Message(/quote) isn't yours
-		else if (!msgYours) {
-			message = baseMessage ?? message;
-			//Maybe the base message is yours
-			if (!baseMsgYours)
-				return this.doubleClickToReplySetting ? this.replyToMessage(this.getChannel(message.channel_id), message, e) : null;
-		}
-
-		//If anything was yours;
-		//Execute order 66
-		this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
-	}
-
-	isMessageYours(message, id) {
-		//If message is falsely
-		if (!message)
-			return undefined;
-		//If it's us
-		if (message.author.id === id)
-			return true;
-		//But if it's not!
-		return false;
+		if (message)
+			if (message.author.id === this.CurrentUserStore.getCurrentUser().id) {
+				this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
+			}
+			else if (this.doubleClickToReplySetting) {
+				this.replyToMessage(this.getChannel(message.channel_id), message, e);
+			}
 	}
 
 	getValueFromKey(instance, searchkey) {
@@ -212,7 +182,6 @@ class DoubleClickToEdit {
 			}
 			//If a poor sod got found this will not be `undefined`
 			return result;
-
 			//Start our mayhem
 		}(instance);
 	}
