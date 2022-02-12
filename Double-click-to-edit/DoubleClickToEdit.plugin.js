@@ -1,7 +1,7 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.3.0
+ * @version 9.3.1
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
@@ -15,7 +15,7 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.0",
+		version: "9.3.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
@@ -116,7 +116,7 @@ class DoubleClickToEdit {
 			return;
 
 		//Target the message
-		const messageDiv = e.target.closest('[class^=message]');
+		const messageDiv = e.target.closest('li > [class^=message]');
 		//If it finds nothing, null it.
 		if (!messageDiv)
 			return;
