@@ -242,6 +242,8 @@ class HideChannels {
 
 		//Keydown event
 		useListener("keydown", e => {
+                        //Only toggle when the ctrl key is press (i.e. ctrl+h)
+                        if (!e.ctrlKey) return;
 			//Since we made this an object,
 			//we can make new propertire with `[]`
 			this.currentlyPressed[e.keyCode] = true;
