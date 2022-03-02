@@ -1,21 +1,24 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.1.0
+ * @version 2.1.1
  * @description Hide channel list from view.
- * 
+ *
+ * @invite qH6UWCwfTu
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/edit/master/Hide-Channels/HideChannels.plugin.js
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js
  */
 
+/** @type {typeof import("react")} */
+const React = BdApi.React;
 
 const config = {
 	info: {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.1.0",
+		version: "2.1.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -31,42 +34,13 @@ const config = {
 
 
 class HideChannels {
-
+	//I like my spaces.
 	getName() { return config.info.name; }
 
 
 	load() {
-		if (!global.ZeresPluginLibrary) {
-			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
-				confirmText: "Download Now",
-				cancelText: "Cancel",
-				onConfirm: () => {
-					require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
-						async (error, response, body) => {
-							if (error)
-								return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
-							await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
-						});
-				}
-			});
-		}
-
-		//First try the updater
-		try {
-			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-		}
-		catch (err) {
-			console.error(this.getName(), "Plugin Updater could not be reached, attempting to enable plugin.", err);
-			try {
-				BdApi.Plugins.enable("ZeresPluginLibrary");
-				if (!BdApi.Plugins.isEnabled("ZeresPluginLibrary"))
-					throw new Error("Failed to enable ZeresPluginLibrary.");
-			}
-			catch (err) {
-				console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
-
-			}
-		}
+			try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
+			catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
 	}
 
 	start() {
@@ -82,7 +56,7 @@ class HideChannels {
 
 			//React components for settings
 			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
-			this.KeybindRecorder = BdApi.findModuleByDisplayName("KeybindRecorder");
+			this.WindowInfoStore = BdApi.findModuleByProps("isFocused", "isElementFullScreen");
 
 			//Check if there is any CSS we have already, and remove it.
 			BdApi.clearCSS(config.constants.cssStyle);
@@ -139,12 +113,16 @@ class HideChannels {
 	}
 
 	getSettingsPanel() {
+		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. shown).
+		if (!this.KeybindRecorder)
+			this.KeybindRecorder = BdApi.findModuleByDisplayName("KeybindRecorder");
+
 		//Return our keybind settings wrapped in a form item
-		return BdApi.React.createElement(this.FormItem, {
+		return React.createElement(this.FormItem, {
 			title: "Toggle by keybind:"
 		},
 			//Containing a keybind recorder.
-			BdApi.React.createElement(this.KeybindRecorder, {
+			React.createElement(this.KeybindRecorder, {
 				defaultValue: this.keybindSetting,
 				onChange: (e) => {
 					//Set the keybind and save it.
@@ -182,9 +160,9 @@ class HideChannels {
 			if (methodArguments[0]?.["aria-label"])
 				if (Array.isArray(methodArguments[0]?.children))
 					//Make sure our component isn't already present.
-					if (methodArguments[0].children[0]?.key !== config.info.id)
+					if (methodArguments[0].children[0]?.key !== config.info.id) //TODO: This really needs to be done better. Can't be sure its always at position 0.
 						//And since we want to be on the most left of the header bar for style we unshift into the array.
-						methodArguments[0].children.unshift(BdApi.React.createElement(this.hideChannelComponent, { key: config.info.id }));
+						methodArguments[0].children.unshift(React.createElement(this.hideChannelComponent, { key: config.info.id }));
 
 		});
 	}
@@ -197,7 +175,7 @@ class HideChannels {
 		//Only fetch the sidebar on a rerender.
 		const sidebarNode = document.querySelector(`.${this.sidebarClass}`),
 			//When a state updates, it rerenders.
-			[hidden, setHidden] = BdApi.React.useState(
+			[hidden, setHidden] = React.useState(
 				//Check on a rerender where our side bar is so we can correctly reflect this.
 				sidebarNode?.classList.contains(config.constants.hideElementsName) ?
 					true : false);
@@ -210,11 +188,18 @@ class HideChannels {
 		 * @param {object} [target] The object to attach our listener to.
 		 */
 		function useListener(eventName, callback, bubbling, target = document) {
-			BdApi.React.useEffect(() => {
+			React.useEffect(() => {
 				//ComponentDidMount
 				target.addEventListener(eventName, callback, bubbling);
 				//ComponentWillUnmount
 				return () => target.removeEventListener(eventName, callback, bubbling);
+			});
+		}
+
+		function useWindowChangeListener(windowStore, callback) {
+			React.useEffect(() => {
+				windowStore.addChangeListener(callback);
+				return () => windowStore.removeChangeListener(callback);
 			});
 		}
 
@@ -262,8 +247,15 @@ class HideChannels {
 			//Account for bubbling and attach to the global: `window`
 		}, true, window);
 
+		//Lose focus event
+		useWindowChangeListener(this.WindowInfoStore, () => {
+			//Clear when it gets back into focus
+			if (this.WindowInfoStore.isFocused())
+				this.currentlyPressed = [];
+		});
+
 		//Return our element.
-		return BdApi.React.createElement("div", {
+		return React.createElement("div", {
 			//Styling
 			id: config.constants.buttonID,
 			//To identify our object
