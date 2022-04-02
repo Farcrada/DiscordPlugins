@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.1.1
+ * @version 2.1.2
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.1.1",
+		version: "2.1.2",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -39,8 +39,8 @@ class HideChannels {
 
 
 	load() {
-			try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
-			catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
+		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
+		catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
 	}
 
 	start() {
@@ -157,13 +157,11 @@ class HideChannels {
 			//because if not we'll render a button on the split view.
 
 			//Also: Prevent thread button appearing with this first line.
-			if (methodArguments[0]?.["aria-label"])
-				if (Array.isArray(methodArguments[0]?.children))
-					//Make sure our component isn't already present.
-					if (methodArguments[0].children[0]?.key !== config.info.id) //TODO: This really needs to be done better. Can't be sure its always at position 0.
-						//And since we want to be on the most left of the header bar for style we unshift into the array.
-						methodArguments[0].children.unshift(React.createElement(this.hideChannelComponent, { key: config.info.id }));
-
+			if (Array.isArray(methodArguments[0]?.children))
+				//Make sure our component isn't already present.
+				if (methodArguments[0].children.filter(child => child.key === config.info.id).length < 1)
+					//And since we want to be on the most left of the header bar for style we unshift into the array.
+					methodArguments[0].children.unshift(React.createElement(this.hideChannelComponent, { key: config.info.id }));
 		});
 	}
 
