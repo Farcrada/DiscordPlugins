@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.1.2
+ * @version 2.1.3
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.1.2",
+		version: "2.1.3",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -159,7 +159,7 @@ class HideChannels {
 			//Also: Prevent thread button appearing with this first line.
 			if (Array.isArray(methodArguments[0]?.children))
 				//Make sure our component isn't already present.
-				if (methodArguments[0].children.filter(child => child.key === config.info.id).length < 1)
+				if (methodArguments[0].children.filter(child => child?.key === config.info.id).length < 1)
 					//And since we want to be on the most left of the header bar for style we unshift into the array.
 					methodArguments[0].children.unshift(React.createElement(this.hideChannelComponent, { key: config.info.id }));
 		});
