@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.0.7
+ * @version 4.1.0
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -10,13 +10,15 @@
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js
  */
 
+/** @type {typeof import("react")} */
+const React = BdApi.React;
 
 const config = {
 	info: {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.0.7",
+		version: "4.1.0",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -38,7 +40,7 @@ class ChannelPermissions {
 
 
 	load() {
-		if (!global.ZeresPluginLibrary) {
+		if (!global.ZeresPluginLibrary)
 			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
 				confirmText: "Download Now",
 				cancelText: "Cancel",
@@ -51,32 +53,12 @@ class ChannelPermissions {
 						});
 				}
 			});
-		}
-
-		//First try the updater
-		try {
-			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-		}
-		catch (err) {
-			console.error(this.getName(), "Plugin Updater could not be reached, attempting to enable plugin.", err);
-			try {
-				BdApi.Plugins.enable("ZeresPluginLibrary");
-				if (!BdApi.Plugins.isEnabled("ZeresPluginLibrary"))
-					throw new Error("Failed to enable ZeresPluginLibrary.");
-
-				global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-			}
-			catch (err) {
-				console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
-
-				BdApi.alert("Could not enable or find ZeresPluginLibrary",
-					"Could not start the plugin because ZeresPluginLibrary could not be found or enabled. Please enable and/or download it manually in your plugins folder.");
-			}
-		}
+		else
+			try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
+			catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
 	}
 
 	start() {
-		//Now try to initialize.
 		try {
 			//Inject our styles
 			BdApi.injectCSS(config.constants.cssStyle, `
@@ -107,6 +89,7 @@ class ChannelPermissions {
 			this.roleListClasses = BdApi.findModuleByProps("rolesList");
 			this.popoutRootClasses = BdApi.findModuleByProps("container", "activity");
 			this.popoutBodyClasses = BdApi.findModuleByProps("thin", "scrollerBase");
+			this.popoutChannelActivityClasses = BdApi.findModuleByProps("channelActivityContainer", "activity");
 
 			//Permissions
 			this.PermissionStore = BdApi.findModuleByProps("Permissions", "ActivityTypes");
@@ -123,6 +106,8 @@ class ChannelPermissions {
 			this.getCurrentUser = UserStore.getCurrentUser;
 			//Store color converter (hex -> rgb) and d
 			this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
+
+			this.sortObject = obj => Object.keys(obj).sort().reduce((res, key) => (res[key] = obj[key], res), {});
 
 			//Patches
 			this.patchTextChannel();
@@ -156,6 +141,7 @@ class ChannelPermissions {
 			self = this;
 
 
+		//We fucked with the type so we need to replace this aswell.
 		function useActiveThreads(channel) {
 			//We don't want accidental mishaps with voice channels
 			if (channel.isVocal())
@@ -173,6 +159,7 @@ class ChannelPermissions {
 			});
 		}
 
+		//After forcing the popout, we need to fill it with something
 		function PatchedThreadsPopout(props) {
 			//Get the neccessities from the props.
 			const { children, className, channel } = props;
@@ -183,7 +170,7 @@ class ChannelPermissions {
 			}
 
 			//Return our custom popout				Ends up being: `popout-APcvZm`
-			return BdApi.React.createElement("div", { className: className },
+			return React.createElement("div", { className: className },
 				//Our tooltip
 				self.ChannelTooltip(channel),
 				//Get the threads we can access and sort them by most recent
@@ -193,7 +180,7 @@ class ChannelPermissions {
 			);
 		}
 
-		//Patcher McPatcherson
+		//Patcher McPatcherson of the existing popout function (Threads)
 		BdApi.Patcher.after(config.info.id, ActiveThreadsPopout, "default", (thisObject, methodArguments, returnValue) => {
 			//Replace the type, i.e. patch the type
 			returnValue.type = PatchedThreadsPopout;
@@ -203,6 +190,7 @@ class ChannelPermissions {
 
 		const TextChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("TextChannel", `.${this.containerDefault}`);
 
+		//Patch mouse handling and always show popout
 		BdApi.Patcher.after(config.info.id, TextChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
 			//Make sure we can choose our delays
 			//To do that we need to reconstruct
@@ -247,6 +235,7 @@ class ChannelPermissions {
 		//Get the module
 		const VoiceChannelActivities = BdApi.findModule(m => m?.default?.displayName === "VoiceChannelActivities");
 
+		//Patch the existing popout function (Voice activities)
 		BdApi.Patcher.after(config.info.id, VoiceChannelActivities, "default", (thisObject, methodArguments, returnValue) => {
 			//Set props
 			const props = methodArguments[0];
@@ -258,10 +247,10 @@ class ChannelPermissions {
 			//If it has a return value it means there's already something build,
 			//no need to create the base again. As such, unshift it into the first position.
 			if (returnValue)
-				returnValue.props.children.unshift(this.ChannelTooltip(props.channel, true));
+				returnValue?.props?.children[2]?.unshift(this.ChannelTooltip(props.channel, true, true));
 			//Otherwise, as mentioned, create the base and load the tooltip.
 			else
-				return BdApi.React.createElement("div", { className: `${this.popoutRootClasses.container} ${this.popoutBodyClasses.thin}` }, this.ChannelTooltip(props.channel, true));
+				return React.createElement("div", { className: `${this.popoutRootClasses.container} ${this.popoutBodyClasses.thin} ${this.popoutBodyClasses.scrollerBase}` }, this.ChannelTooltip(props.channel, true));
 		});
 
 		//Handle the functionality,
@@ -297,7 +286,7 @@ class ChannelPermissions {
 			};
 		});
 
-		//Tell it to show after, because we always have something.
+		//Tell it to show a popup, because we always have something.
 		BdApi.Patcher.after(config.info.id, VoiceChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
 			//Get the props of the renderpopout
 			const props = this.findValue(returnValue, "renderPopout", true);
@@ -317,35 +306,46 @@ class ChannelPermissions {
 	 * @param {boolean} [voice=false] Is the tooltip for a voice channel?
 	 * @returns React element to render
 	 */
-	ChannelTooltip(channel, voice = false) {
+	ChannelTooltip(channel, voice = false, otherActivity = false) {
 		//Destructure all the elements from the specific channel
 		const { allowedElements,
 			deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id).roles, channel),
 			//Get our channel details
 			{ topic,
-				categorySynced } = this.getDetails(channel);
+				categorySynced } = this.getDetails(channel),
+			baseTooltip = React.createElement("div", { className: `${config.constants.channelTooltipClass}${voice ? "" : ` ${config.constants.textPopoutClass}`}`, style: { "margin-top": `${voice ? "-" : ""}8px` } }, [
+
+				//Check if the permissions of the channel are synced with the category
+				//If at all present, that is; We need to check it's type because null/undefined is not a boolean.
+				typeof (categorySynced) === "string" ?
+					React.createElement("div", { className: config.constants.syncClass },
+						categorySynced) :
+					null,
+
+				//Start with the channel topic;
+				//Check if it has a topic and regex-replace any breakage with nothing.
+				topic && topic.replace(/[\t\n\r\s]/g, "") ?
+					React.createElement("div", null, [
+						React.createElement("div", { className: this.roleListClasses.bodyTitle }, "Topic:"),
+						React.createElement("div", { className: config.constants.topicClass }, topic)
+					]) :
+					null
+
+				//And lastly; create and add the sections
+			].concat(this.createSections(allowedElements, deniedElements)),
+				React.createElement("div", { className: `${this.popoutChannelActivityClasses.activityActionsContainer}` }));
 
 		//Set up variable for the HTML string we need to display in our tooltiptext.
-		return BdApi.React.createElement("div", { className: `${config.constants.channelTooltipClass}${voice ? "" : ` ${config.constants.textPopoutClass}`}`, style: { "margin-top": `${voice ? "-" : ""}8px` } }, [
+		return !voice ? baseTooltip :
+			!otherActivity ?
+				React.createElement("div", { className: `${this.popoutRootClasses.popoutHeaderContainer}` },
+					React.createElement("div", { className: `${this.popoutChannelActivityClasses.activity}` },
+						React.createElement("div", { className: `${this.popoutChannelActivityClasses.channelActivityContainer}` },
+							baseTooltip))) :
+				React.createElement("div", { className: `${this.popoutChannelActivityClasses.activity}` },
+					React.createElement("div", { className: `${this.popoutChannelActivityClasses.channelActivityContainer}` },
+						baseTooltip));
 
-			//Check if the permissions of the channel are synced with the category
-			//If at all present, that is; We need to check it's type because null/undefined is not a boolean.
-			typeof (categorySynced) === "string" ?
-				BdApi.React.createElement("div", { className: config.constants.syncClass },
-					categorySynced) :
-				null,
-
-			//Start with the channel topic;
-			//Check if it has a topic and regex-replace any breakage with nothing.
-			topic && topic.replace(/[\t\n\r\s]/g, "") ?
-				BdApi.React.createElement("div", null, [
-					BdApi.React.createElement("div", { className: this.roleListClasses.bodyTitle }, "Topic:"),
-					BdApi.React.createElement("div", { className: config.constants.topicClass }, topic)
-				]) :
-				null
-
-			//And lastly; create and add the sections
-		].concat(this.createSections(allowedElements, deniedElements)));
 	}
 
 	/**
@@ -355,11 +355,11 @@ class ChannelPermissions {
 	 * @param {object} elements React elements to append under this title
 	 * @returns React element to render
 	 */
-	createSection(type, title, elements) {
+	createSection(type, title, elements, lastSection = false) {
 		return elements[type] && elements[type].length > 0 ?
-			BdApi.React.createElement("div", null, [
-				BdApi.React.createElement("div", { className: this.roleListClasses.bodyTitle }, title),
-				BdApi.React.createElement("div", { className: `${this.roleClasses.root} ${this.roleListClasses.rolesList} ${this.roleListClasses.endBodySection}` }, elements[type])
+			React.createElement("div", null, [
+				React.createElement("div", { className: this.roleListClasses.bodyTitle }, title),
+				React.createElement("div", { className: `${this.roleClasses.root} ${this.roleListClasses.rolesList} ${this.roleListClasses.endBodySection}`, style: lastSection ? { 'margin-bottom': `unset` } : {} }, elements[type])
 			]) :
 			null;
 	}
@@ -371,12 +371,39 @@ class ChannelPermissions {
 	 * @returns An array of React elements to render
 	 */
 	createSections(allowedElements, deniedElements) {
-		return [
-			this.createSection("roles", "Allowed Roles:", allowedElements),
-			this.createSection("users", "Allowed Users:", allowedElements),
-			this.createSection("roles", "Denied Roles:", deniedElements),
-			this.createSection("users", "Denied Users:", deniedElements)
-		];
+		let allowedRoles = this.createSection("roles", "Allowed Roles:", allowedElements),
+			allowedUsers, deniedRoles, deniedUsers;
+
+		//Scuffed logic to get the last section and make it look nice.
+		//If anyone has any ideas to clean this up; hmu lmao
+		if (allowedElements["users"]?.length > 0)
+			if (deniedElements["roles"]?.length > 0)
+				if (deniedElements["users"]?.length > 0)
+					// aRoles - aUsers - dRoles - dUsers
+					deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true);
+				else
+					// aRoles - aUsers - dRoles
+					deniedRoles = this.createSection("roles", "Denied Roles:", deniedElements, true);
+			else
+				// aRoles - aUsers
+				allowedUsers = this.createSection("users", "Allowed Users:", allowedElements, true);
+		else
+			if (deniedElements["roles"]?.length > 0)
+				if (deniedElements["users"]?.length > 0)
+					// aRoles - dRoles - dUsers
+					deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true);
+				else
+					// aRoles - dRoles
+					deniedRoles = this.createSection("roles", "Denied Roles:", deniedElements, true);
+			else
+				if (deniedElements["users"]?.length > 0)
+					// aRoles - dUsers
+					deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true);
+				else
+					// aRoles
+					allowedRoles = this.createSection("roles", "Allowed Roles:", allowedElements, true);
+
+		return [allowedRoles, allowedUsers, deniedRoles, deniedUsers];
 	}
 
 	/**
@@ -387,14 +414,14 @@ class ChannelPermissions {
 	 * @returns React element to render
 	 */
 	createRoleElement(color, name, self = false) {
-		return BdApi.React.createElement("div", { className: this.roleClasses.role, style: { "border-color": `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})` } }, [
-			BdApi.React.createElement("div", { className: this.roleClasses.roleCircle, style: { 'background-color': `rgb(${color[0]}, ${color[1]}, ${color[2]})` } }),
+		return React.createElement("div", { className: this.roleClasses.role, style: { "border-color": `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})` } }, [
+			React.createElement("div", { className: this.roleClasses.roleCircle, style: { 'background-color': `rgb(${color[0]}, ${color[1]}, ${color[2]})` } }),
 			//And if you have the role
 			self ?
 				//Add the style to strikethrough
-				BdApi.React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName, style: { "text-decoration": "line-through" } }, name) :
+				React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName, style: { "text-decoration": "line-through" } }, name) :
 				//Otherwise just add as is
-				BdApi.React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName }, name)
+				React.createElement("div", { 'aria-hidden': true, className: this.roleClasses.roleName }, name)
 		]);
 	}
 
@@ -409,9 +436,8 @@ class ChannelPermissions {
 		let allowedElements = {},
 			deniedElements = {},
 			everyoneDenied = false;
-
 		//So much text, lets improve readability.
-		const channelOW = channel.permissionOverwrites,
+		const channelOW = this.sortObject(channel.permissionOverwrites),
 			//Permission overrides
 			permissionOverrideTypes = this.PermissionStore.PermissionOverrideType,
 			//Permissions
@@ -525,8 +551,8 @@ class ChannelPermissions {
 					parentChannel = this.getChannel(this.getChannel(channel.id).parent_id)
 
 				try {
-					const parentPerms = this.getPermissionsOfChannel(parentChannel),
-						channelPerms = this.getPermissionsOfChannel(channel);
+					const parentPerms = this.sortObject(this.getPermissionsOfChannel(parentChannel)),
+						channelPerms = this.sortObject(this.getPermissionsOfChannel(channel));
 
 					//Return with topic and sync property
 					return { topic: channel.topic, categorySynced: `${JSON.stringify(parentPerms) === JSON.stringify(channelPerms) ? "S" : "Not s"}ynced to category` };
