@@ -1,7 +1,7 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.3.2
+ * @version 9.3.3
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
@@ -15,14 +15,23 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.2",
+		version: "9.3.3",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
-}
+};
+
+const blacklist = [
+	//Object
+	"video",
+	"emoji",
+	//Classes
+	"content",
+	"reactionInner"
+];
 
 
-class DoubleClickToEdit {
+module.exports = class DoubleClickToEdit {
 
 	//I like my spaces. 
 	getName() { return config.info.name; }
@@ -30,12 +39,8 @@ class DoubleClickToEdit {
 
 
 	load() {
-		try {
-			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-		}
-		catch (err) {
-			console.error(this.getName(), "Plugin Updater could not be reached.", err);
-		}
+		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
+		catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
 	}
 
 	start() {
@@ -56,7 +61,7 @@ class DoubleClickToEdit {
 			this.SwitchItem = BdApi.findModuleByDisplayName("SwitchItem");
 
 			//Events
-			document.addEventListener('dblclick', this.doubleclickFunc);
+			global.document.addEventListener('dblclick', this.doubleclickFunc);
 
 			this.doubleClickToReplySetting = BdApi.loadData(config.info.id, "doubleClickToReplySetting") ?? false;
 		}
@@ -111,8 +116,9 @@ class DoubleClickToEdit {
 	}
 
 	handler(e) {
-		//Check if we're not double clicking a video
-		if (e.target.className.startsWith("video"))
+		//Check if we're not double clicking
+		if (typeof (e?.target?.className) !== typeof("") ||
+			blacklist.findIndex(nameOfClass => e?.target?.className?.indexOf?.(nameOfClass) > -1) > -1)
 			return;
 
 		//Target the message
@@ -137,12 +143,10 @@ class DoubleClickToEdit {
 		const message = this.getValueFromKey(instance, "baseMessage") ?? this.getValueFromKey(instance, "message");
 
 		if (message)
-			if (message.author.id === this.CurrentUserStore.getCurrentUser().id) {
+			if (message.author.id === this.CurrentUserStore.getCurrentUser().id)
 				this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
-			}
-			else if (this.doubleClickToReplySetting) {
+			else if (this.doubleClickToReplySetting)
 				this.replyToMessage(this.getChannel(message.channel_id), message, e);
-			}
 	}
 
 	getValueFromKey(instance, searchkey) {
