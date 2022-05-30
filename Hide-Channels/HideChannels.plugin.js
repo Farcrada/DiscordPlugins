@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.1.3
+ * @version 2.2.0
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.1.3",
+		version: "2.2.0",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -33,7 +33,7 @@ const config = {
 }
 
 
-class HideChannels {
+module.exports = class HideChannels {
 	//I like my spaces.
 	getName() { return config.info.name; }
 
@@ -45,18 +45,20 @@ class HideChannels {
 
 	start() {
 		try {
+			//React components for settings
+			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
+			this.WindowInfoStore = BdApi.findModuleByProps("isFocused", "isElementFullScreen");
+			this.KeybindStore = BdApi.findModuleByProps("toCombo");
+
 			//The sidebar to "minimize"/hide
 			this.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
 
 			//And the keybind
 			this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
-			this.keybind = this.filterKeybind(this.keybindSetting);
+			this.keybind = this.keybindSetting.split('+');
+
 			//Predefine current keybind
 			this.currentlyPressed = {};
-
-			//React components for settings
-			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
-			this.WindowInfoStore = BdApi.findModuleByProps("isFocused", "isElementFullScreen");
 
 			//Check if there is any CSS we have already, and remove it.
 			BdApi.clearCSS(config.constants.cssStyle);
@@ -123,13 +125,16 @@ class HideChannels {
 		},
 			//Containing a keybind recorder.
 			React.createElement(this.KeybindRecorder, {
-				defaultValue: this.keybindSetting,
+				defaultValue: this.KeybindStore.toCombo(this.keybindSetting.replace("control", "ctrl")),
 				onChange: (e) => {
+					//Convert the keybind to current locale
+					const keybindString = this.KeybindStore.toString(e).toLowerCase().replace("ctrl", "control");
+
 					//Set the keybind and save it.
-					this.keybind = this.filterKeybind(e);
-					BdApi.saveData(config.info.id, "keybind", e);
+					BdApi.saveData(config.info.id, "keybind", keybindString);
 					//And the keybindSetting
-					this.keybindSetting = this.checkKeybindLoad(e);
+					this.keybindSetting = keybindString;
+					this.keybind = keybindString.split('+');
 				}
 			}));
 	}
@@ -159,9 +164,9 @@ class HideChannels {
 			//Also: Prevent thread button appearing with this first line.
 			if (Array.isArray(methodArguments[0]?.children))
 				//Make sure our component isn't already present.
-				if (methodArguments[0].children.filter(child => child?.key === config.info.id).length < 1)
+				if (methodArguments[0].children.filter?.(child => child?.key === config.info.id).length < 1)
 					//And since we want to be on the most left of the header bar for style we unshift into the array.
-					methodArguments[0].children.unshift(React.createElement(this.hideChannelComponent, { key: config.info.id }));
+					methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.id }));
 		});
 	}
 
@@ -175,8 +180,7 @@ class HideChannels {
 			//When a state updates, it rerenders.
 			[hidden, setHidden] = React.useState(
 				//Check on a rerender where our side bar is so we can correctly reflect this.
-				sidebarNode?.classList.contains(config.constants.hideElementsName) ?
-					true : false);
+				sidebarNode?.classList.contains(config.constants.hideElementsName));
 
 		/**
 		 * Use this to make a despensable easy to use listener with React.
@@ -219,6 +223,7 @@ class HideChannels {
 				//If it is hidden, we need to show it.
 				else
 					sidebar?.classList.remove(config.constants.hideElementsName);
+
 				return !state;
 			};
 		}
@@ -227,7 +232,7 @@ class HideChannels {
 		useListener("keydown", e => {
 			//Since we made this an object,
 			//we can make new propertire with `[]`
-			this.currentlyPressed[e.keyCode] = true;
+			this.currentlyPressed[e.key.toLowerCase()] = true;
 
 			//Account for bubbling and attach to the global: `window`
 		}, true, window);
@@ -235,12 +240,12 @@ class HideChannels {
 		//Keyup event
 		useListener("keyup", e => {
 			//Check if every currentlyPessed is in our saved keybind.
-			if (this.keybind.every(key => this.currentlyPressed[key] === true))
+			if (this.keybind.every(key => this.currentlyPressed[key.toLowerCase()] === true))
 				//Toggle the sidebar and rerender on toggle; change the state
 				setHidden(toggleSidebar(sidebarNode));
 
 			//Current key goes up, so...
-			this.currentlyPressed[e.keyCode] = false;
+			this.currentlyPressed[e.key.toLowerCase()] = false;
 
 			//Account for bubbling and attach to the global: `window`
 		}, true, window);
@@ -249,7 +254,7 @@ class HideChannels {
 		useWindowChangeListener(this.WindowInfoStore, () => {
 			//Clear when it gets back into focus
 			if (this.WindowInfoStore.isFocused())
-				this.currentlyPressed = [];
+				this.currentlyPressed = {};
 		});
 
 		//Return our element.
@@ -267,63 +272,33 @@ class HideChannels {
 
 	/**
 	 * Checks the given keybind for validity. If not valid returns a default keybind.
-	 * @param {Array.<Array.<number>>} keybindToLoad The keybind to filter and load in.
-	 * @param {!Array.<Array.<number>>} [defaultKeybind] A default keybind to fall back on in case of invalidity.
+	 * @param {String|Array.<number>|Array.<Array.<number>>} keybindToLoad The keybind to filter and load in.
+	 * @param {String} [defaultKeybind] A default keybind to fall back on in case of invalidity.
 	 * @returns Will return the keybind or return a default keybind.
 	 */
-	checkKeybindLoad(keybindToLoad, defaultKeybind = [[0, 162], [0, 72]]) {
+	checkKeybindLoad(keybindToLoad, defaultKeybind = "control+h") {
+		defaultKeybind = defaultKeybind.toLowerCase().replace("ctrl", "control");
+
+		//If no keybind
 		if (!keybindToLoad)
 			return defaultKeybind;
-		for (const key of keybindToLoad) {
-			if (Array.isArray(key)) {
-				for (const keyCode of key)
-					if (typeof (keyCode) !== "number")
-						return defaultKeybind;
+
+		//Error sensitive, so just plump it into a try-catch
+		try {
+			//If it's already a string, double check it
+			if (typeof (keybindToLoad) === typeof (defaultKeybind)) {
+				keybindToLoad = keybindToLoad.toLowerCase().replace("control", "ctrl");
+				//Does it go into a combo? (i.e.: is it the correct format?)
+				if (this.KeybindStore.toCombo(keybindToLoad))
+					return keybindToLoad.replace("ctrl", "control");
+				else
+					return defaultKeybind;
 			}
-			else if (typeof (key) !== "number")
-				return defaultKeybind;
-
-		}
-		return keybindToLoad;
-	}
-
-	/**
-	 * Filters a keybind to work with the `EventListener`s.
-	 * @param {(Array.<number>|Array.<Array.<number>>)} keybind Keybind to filter.
-	 * @returns {(Array.<number>|Array.<Array.<number>>)} The filtered keybind.
-	 */
-	filterKeybind(keybind) {
-		return keybind.map(keyCode => {
-			//Multiple keys
-			if (Array.isArray(keyCode[0]))
-				for (let i = 0; i < keyCode.length; i++)
-					keyCode[i] = fixCode(keyCode[i])
-			//Single keys
 			else
-				keyCode = fixCode(keyCode);
-			//Return our fixed keycode.
-			return keyCode;
-
-			function fixCode(code) {
-				code = code[1];
-				switch (code) {
-					case 20:                    //Tab: 20 -> 9
-						return 9;
-					//Fallthrough since it's the same
-					case 160:                   //Shift: 160 -> 16 
-					case 161:                   //R Shift: 161 -> 16
-						return 16;
-					//Again
-					case 162:                   //Control: 162 -> 17
-					case 163:                   //R Control: 163 -> 17
-						return 17;
-					//And again.
-					case 164:                   //Alt: 164 -> 18
-					case 165:                   //R Alt: 165 ->  18
-						return 18;
-					default: return code;       //Other keys? return them;
-				}
-			}
-		});
+				//If it's not a string, check if it's a combo.
+				if (this.KeybindStore.toString(keybindToLoad))
+					return this.KeybindStore.toString(keybindToLoad).toLowerCase().replace("ctrl", "control");
+		}
+		catch (e) { return defaultKeybind; }
 	}
 }
