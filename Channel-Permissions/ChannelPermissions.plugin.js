@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.1.0
+ * @version 4.2.0
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.1.0",
+		version: "4.2.0",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -34,7 +34,7 @@ const config = {
 }
 
 
-class ChannelPermissions {
+module.exports = class ChannelPermissions {
 	//I like my spaces. 
 	getName() { return config.info.name; }
 
@@ -79,10 +79,17 @@ class ChannelPermissions {
 	font-size: 12px;
 	margin-bottom: 10px;
 }`);
-			//Create and cache expensive `BdApi.findModule` calls.
+
+			//Modules for the settings
+			this.TextInput = BdApi.findModule(m => m?.default?.displayName === "TextInput").default;
+			this.FormStore = BdApi.findModuleByProps("FormItem");
+			//Load any settings we have
+			this.openingPopoutDelay = BdApi.loadData(config.info.id, "openingPopoutDelay") ?? config.constants.popoutDelay;
+			this.closingPopoutDelay = BdApi.loadData(config.info.id, "closingPopoutDelay") ?? config.constants.popoutDelay;
 
 			//Lose/single classes
 			this.containerDefault = BdApi.findModuleByProps("actionIcon", "containerDefault").containerDefault;
+			this.categoryContainer = BdApi.findModuleByProps("spaceBeforeCategory", "containerDefault").containerDefault;
 
 			//Class collections
 			this.roleClasses = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
@@ -100,18 +107,24 @@ class ChannelPermissions {
 			this.getGuild = BdApi.findModuleByProps("getGuild", "getGuilds").getGuild;
 			this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
 			this.getMember = BdApi.findModuleByProps("getMember", "getMembers").getMember;
+
 			//Set local store and get the functions we need.
 			const UserStore = BdApi.findModuleByProps("getUser", "getUsers");
 			this.getUser = UserStore.getUser;
 			this.getCurrentUser = UserStore.getCurrentUser;
+
+			this.StateStore = BdApi.findModuleByProps("useStateFromStoresArray");
+
+			//Get our popout module we will patch and use
+			this.ActiveThreadsPopoutModule = BdApi.findModule(m => m?.default?.displayName === "ActiveThreadsPopout");
+			this.PopoutModule = BdApi.findModule(m => m?.default?.displayName === "Popout");
+
 			//Store color converter (hex -> rgb) and d
 			this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
 
 			this.sortObject = obj => Object.keys(obj).sort().reduce((res, key) => (res[key] = obj[key], res), {});
 
-			//Patches
-			this.patchTextChannel();
-			this.patchVoiceChannel();
+			this.runPatches();
 		}
 		catch (err) {
 			try {
@@ -124,16 +137,71 @@ class ChannelPermissions {
 		}
 	}
 
-	stop() { BdApi.Patcher.unpatchAll(config.info.id); BdApi.clearCSS(config.constants.cssStyle); }
+	runPatches() {
+		this.patchThreadPopout();
+		this.patchVoiceActivities();
+		this.patchCategoryChannel();
+		this.patchTextChannel();
+		this.patchVoiceChannel();
+	}
 
-	async patchTextChannel() {
-		//Get our popout module we will patch
-		const ActiveThreadsPopout = BdApi.findModule(m => m?.default?.displayName === "ActiveThreadsPopout"),
-			//The stores we use to reference from
-			ThreadsStore = BdApi.findModuleByProps("getActiveUnjoinedThreadsForParent"),
+	getSettingsPanel() {
+		return React.createElement(this.FormStore.FormSection, null,
+			React.createElement(this.FormStore.FormItem, {
+				title: "Hover open delay:"
+			},
+				React.createElement(this.TextInput, {
+					type: "number",
+					defaultValue: this.openingPopoutDelay,
+					onChange: (e) => {
+						if (e < 0)
+							return;
+
+						BdApi.saveData(config.info.id, "openingPopoutDelay", e);
+						this.openingPopoutDelay = e;
+						this.runPatches();
+					}
+				})),
+			React.createElement(this.FormStore.FormDivider, {
+				style: {
+					"margin-top": 10,
+					"margin-bottom": 10
+				}
+			}),
+			React.createElement(this.FormStore.FormItem, {
+				title: "Hover close delay:"
+			},
+				React.createElement(this.FormStore.FormLabel, {}),
+				React.createElement(this.TextInput, {
+					type: "number",
+					defaultValue: this.closingPopoutDelay,
+					onChange: (e) => {
+						if (e < 0)
+							return;
+
+						BdApi.saveData(config.info.id, "closingPopoutDelay", e);
+						this.closingPopoutDelay = e;
+						this.runPatches();
+					}
+				})));
+	}
+
+	stop() {
+		let CategoryChannel = BdApi.findModule(m => m?.DecoratedComponent?.type);
+		if (CategoryChannel)
+			if (CategoryChannel.DecoratedComponent.type?.__originalFunction)
+				CategoryChannel.DecoratedComponent.type = CategoryChannel.DecoratedComponent.type.__originalFunction;
+
+		BdApi.Patcher.unpatchAll(config.info.id);
+		BdApi.clearCSS(config.constants.cssStyle);
+	}
+
+	patchThreadPopout() {
+		//The stores we use to reference from
+		const ThreadsStore = BdApi.findModuleByProps("getActiveUnjoinedThreadsForParent"),
 			GuildPermissions = BdApi.findModuleByProps("getGuildPermissions"),
 			//Our flux wraper
-			{ useStateFromStoresArray } = BdApi.findModuleByProps("useStateFromStoresArray"),
+			{ useStateFromStoresArray } = this.StateStore,
 			//Permission types for readability
 			permissionTypes = this.PermissionStore.Permissions,
 			//The functions are bound to somewhere else,
@@ -168,11 +236,10 @@ class ChannelPermissions {
 				console.error("Channel is missing. Current props: ", JSON.parse(JSON.stringify(props)));
 				return null;
 			}
-
 			//Return our custom popout				Ends up being: `popout-APcvZm`
 			return React.createElement("div", { className: className },
 				//Our tooltip
-				self.ChannelTooltip(channel),
+				React.createElement(self.ChannelTooltipComponent.bind(self), { key: `${config.info.id}`, channel: channel }),
 				//Get the threads we can access and sort them by most recent
 				useActiveThreads(channel)?.length ?
 					//Null check the threads and if present append them
@@ -181,13 +248,68 @@ class ChannelPermissions {
 		}
 
 		//Patcher McPatcherson of the existing popout function (Threads)
-		BdApi.Patcher.after(config.info.id, ActiveThreadsPopout, "default", (thisObject, methodArguments, returnValue) => {
+		BdApi.Patcher.after(config.info.id, this.ActiveThreadsPopoutModule, "default", (thisObject, methodArguments, returnValue) => {
 			//Replace the type, i.e. patch the type
 			returnValue.type = PatchedThreadsPopout;
+
 			//Assign the props
 			Object.assign(returnValue.props, methodArguments[0]);
 		});
+	}
 
+	patchVoiceActivities() {
+		//Get the module
+		const VoiceChannelActivities = BdApi.findModule(m => m?.default?.displayName === "VoiceChannelActivities");
+
+		//Patch the existing popout function (Voice activities)
+		BdApi.Patcher.after(config.info.id, VoiceChannelActivities, "default", (thisObject, methodArguments, returnValue) => {
+			//Set props
+			const props = methodArguments[0];
+
+			//No channel, no game
+			if (!props.channel)
+				return;
+
+			//If it has a return value it means there's already something build,
+			//no need to create the base again. As such, unshift it into the first position.
+			if (returnValue)
+				returnValue?.props?.children[2]?.unshift(
+					React.createElement(
+						this.ChannelTooltipComponent.bind(this), { key: `${config.info.id}`, channel: props.channel, voice: true, otherActivity: true }));
+			//Otherwise, as mentioned, create the base and load the tooltip.
+			else
+				return React.createElement("div", { className: `${this.popoutRootClasses.container} ${this.popoutBodyClasses.thin} ${this.popoutBodyClasses.scrollerBase}` },
+					React.createElement(this.ChannelTooltipComponent.bind(this), { key: `${config.info.id}`, channel: props.channel, voice: true }));
+		});
+	}
+
+	async patchCategoryChannel() {
+		const CategoryChannel = await global.ZeresPluginLibrary.ReactComponents.getComponent("DragSource(Component)", `.${this.categoryContainer}`, m => m.DecoratedComponent?.type);
+
+		BdApi.Patcher.after(config.info.id, CategoryChannel?.component?.DecoratedComponent, "type", (thisObject, methodArguments, returnValue) => {
+			const decendants = returnValue.props.children[0];
+			returnValue.props.children[0] = React.createElement(
+				this.CategoryPopoutComponent,
+				{
+					key: "CategoryPopoutComponent",
+					popoutDelay: {
+						open: this.openingPopoutDelay,
+						close: config.constants.popoutDelay
+					},
+					decendants: decendants,
+					channel: methodArguments?.[0]?.channel,
+					parentProps: returnValue.props,
+					modules: {
+						popout: this.PopoutModule,
+						activeThreads: this.ActiveThreadsPopoutModule
+					}
+				});
+		});
+
+		CategoryChannel.forceUpdateAll();
+	}
+
+	async patchTextChannel() {
 		const TextChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("TextChannel", `.${this.containerDefault}`);
 
 		//Patch mouse handling and always show popout
@@ -197,17 +319,17 @@ class ChannelPermissions {
 			//the existing events with our own `popoutDelay`
 			const resetThreadPopoutTimers = function () {
 				clearTimeout(thisObject.enterTimer);
-				clearTimeout(thisObject.exitTimer)
+				clearTimeout(thisObject.exitTimer);
 			},
-				mouseEnter = function () {
+				mouseEnter = () => {
 					resetThreadPopoutTimers();
 					thisObject.enterTimer = setTimeout(function () {
 						thisObject.setState({
 							shouldShowThreadsPopout: !0
 						})
-					}, config.constants.popoutDelay);
+					}, this.openingPopoutDelay);
 				},
-				mouseLeave = function () {
+				mouseLeave = () => {
 					resetThreadPopoutTimers();
 					thisObject.exitTimer = setTimeout(function () {
 						thisObject.state.shouldShowThreadsPopout && thisObject.setState({
@@ -231,28 +353,6 @@ class ChannelPermissions {
 	}
 
 	async patchVoiceChannel() {
-		//VoiceChannelActivities
-		//Get the module
-		const VoiceChannelActivities = BdApi.findModule(m => m?.default?.displayName === "VoiceChannelActivities");
-
-		//Patch the existing popout function (Voice activities)
-		BdApi.Patcher.after(config.info.id, VoiceChannelActivities, "default", (thisObject, methodArguments, returnValue) => {
-			//Set props
-			const props = methodArguments[0];
-
-			//No channel, no game
-			if (!props.channel)
-				return;
-
-			//If it has a return value it means there's already something build,
-			//no need to create the base again. As such, unshift it into the first position.
-			if (returnValue)
-				returnValue?.props?.children[2]?.unshift(this.ChannelTooltip(props.channel, true, true));
-			//Otherwise, as mentioned, create the base and load the tooltip.
-			else
-				return React.createElement("div", { className: `${this.popoutRootClasses.container} ${this.popoutBodyClasses.thin} ${this.popoutBodyClasses.scrollerBase}` }, this.ChannelTooltip(props.channel, true));
-		});
-
 		//Handle the functionality,
 		//for that we need to patch the VoiceChannel Render
 		const VoiceChannel = await global.ZeresPluginLibrary.ReactComponents.getComponentByName("VoiceChannel", `.${this.containerDefault}`);
@@ -260,29 +360,33 @@ class ChannelPermissions {
 		//Patch the handlers before since they are merely pased around.
 		BdApi.Patcher.before(config.info.id, VoiceChannel.component.prototype, "render", (thisObject, methodArguments, returnValue) => {
 			//Handle smooth delays
-			thisObject.handleMouseEnter = function () {
+			thisObject.handleMouseEnter = () => {
 				//It's got it's own smoothing but it chooses not to use it.
 				//Which is fairly annoying, considering my plugin.
 				thisObject.activitiesHideTimeout.stop();
 				//Start a new timer with a function that should return the given execution.
-				thisObject.activitiesHideTimeout.start(config.constants.popoutDelay, function () {
-					//Set the state back to true, meaning it shows.
-					return thisObject.setState({
-						shouldShowActivities: !0
-					})
-				});
+				thisObject.activitiesHideTimeout.start(
+					this.openingPopoutDelay,
+					function () {
+						//Set the state back to true, meaning it shows.
+						return thisObject.setState({
+							shouldShowActivities: !0
+						})
+					});
 			};
-			thisObject.handleMouseLeave = function () {
+			thisObject.handleMouseLeave = () => {
 				//But when we leave we need to interrupt the current imer to show.
 				//That's where `stop()` comes in.
 				thisObject.activitiesHideTimeout.stop();
 				//Same as above, and the times reflect those of text channels.
-				thisObject.activitiesHideTimeout.start(config.constants.popoutDelay, function () {
-					//Set state back to false, meaning it hides.
-					return thisObject.setState({
-						shouldShowActivities: !1
-					})
-				});
+				thisObject.activitiesHideTimeout.start(
+					this.closingPopoutDelay,
+					function () {
+						//Set state back to false, meaning it hides.
+						return thisObject.setState({
+							shouldShowActivities: !1
+						})
+					});
 			};
 		});
 
@@ -301,15 +405,82 @@ class ChannelPermissions {
 	}
 
 	/**
+	 * 
+	 * @param {object} props React props
+	 * @param {object} props.popoutDelay 
+	 * @param {number} props.popoutDelay.open Delay from hovering to opening a popout
+	 * @param {number} props.popoutDelay.close Delay from exiting a hover to closing a popout
+	 * @param {object} props.decendants The children that have been rendered
+	 * @param {object} props.channel The channel object
+	 * @param {object} props.parentProps The parent's props to attach mouse events to
+	 * @param {object} props.modules 
+	 * @param {object} props.modules.popout Popout module to instantiate a new popout component
+	 * @param {object} props.modules.activeThreads Component that TextChannels use to fill a popout component
+	 * @returns Popout with supplied decendants/children
+	 */
+	CategoryPopoutComponent(props) {
+		const { popoutDelay, decendants, channel, modules } = props
+		let enterTimer = 0, exitTimer = 0;
+
+		const [shouldShow, setShouldShow] = React.useState(false),
+			resetThreadPopoutTimers = () => {
+				clearTimeout(enterTimer);
+				clearTimeout(exitTimer)
+			},
+			mouseEnter = () => {
+				resetThreadPopoutTimers();
+				enterTimer = setTimeout(function () {
+					setShouldShow(true);
+				}, popoutDelay.open);
+			},
+			mouseLeave = () => {
+				resetThreadPopoutTimers();
+				exitTimer = setTimeout(function () {
+					shouldShow && setShouldShow(false);
+				}, popoutDelay.close);
+			},
+			renderThreadsPopout = (e) => {
+				return React.createElement(modules.activeThreads.default,
+					Object.assign({}, e, { channel }));
+			},
+			handleThreadsPopoutClose = () => {
+				resetThreadPopoutTimers();
+				setShouldShow(false);
+			};
+
+		props.parentProps.onMouseEnter = mouseEnter;
+		props.parentProps.onMouseLeave = mouseLeave;
+
+		React.useEffect(() => {
+			return resetThreadPopoutTimers();
+		}, []);
+
+		return React.createElement(modules.popout.default,
+			{
+				position: modules.popout.default.Positions.RIGHT,
+				renderPopout: renderThreadsPopout,
+				onRequestClose: handleThreadsPopoutClose,
+				spacing: 0,
+				shouldShow: shouldShow
+			},
+			function () {
+				return decendants;
+			});
+	}
+
+	/**
 	 * Constructs the tooltip itself
-	 * @param {object} channel The channel object
-	 * @param {boolean} [voice=false] Is the tooltip for a voice channel?
+	 * @param {object} props React props
+	 * @param {object} props.channel The channel object
+	 * @param {boolean} [props.voice=false] Is the tooltip for a voice channel?
+	 * @param {boolean} [props.otherActivity=false] Is there other activity expected for a voice channel?
 	 * @returns React element to render
 	 */
-	ChannelTooltip(channel, voice = false, otherActivity = false) {
+	ChannelTooltipComponent(props) {
 		//Destructure all the elements from the specific channel
-		const { allowedElements,
-			deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id).roles, channel),
+		const { channel, voice = false, otherActivity = false } = props,
+			{ allowedElements,
+				deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id).roles, channel),
 			//Get our channel details
 			{ topic,
 				categorySynced } = this.getDetails(channel),
@@ -538,32 +709,27 @@ class ChannelPermissions {
 	 * @returns A details object containing the channel topic and if it's synced with the category or not (if applicable)
 	 */
 	getDetails(channel) {
-		//A category doesn't have a topic so we can simply return as is.
-		if (channel.isCategory())
-			return null;
-		else {
-			//Check if the channel is part of a category
-			if (channel.parent_id) {
-				//ShowHiddenChannels plugin overwrites the parent ID if the "hidden"-categroy in settings is selected.
-				//This'll need to be handled.
-				let parentChannel = this.getChannel(channel.parent_id);
-				if (!parentChannel)
-					parentChannel = this.getChannel(this.getChannel(channel.id).parent_id)
+		//Check if the channel is part of a category
+		if (channel.parent_id) {
+			//ShowHiddenChannels plugin overwrites the parent ID if the "hidden"-categroy in settings is selected.
+			//This'll need to be handled.
+			let parentChannel = this.getChannel(channel.parent_id);
+			if (!parentChannel)
+				parentChannel = this.getChannel(this.getChannel(channel.id).parent_id)
 
-				try {
-					const parentPerms = this.sortObject(this.getPermissionsOfChannel(parentChannel)),
-						channelPerms = this.sortObject(this.getPermissionsOfChannel(channel));
+			try {
+				const parentPerms = this.sortObject(this.getPermissionsOfChannel(parentChannel)),
+					channelPerms = this.sortObject(this.getPermissionsOfChannel(channel));
 
-					//Return with topic and sync property
-					return { topic: channel.topic, categorySynced: `${JSON.stringify(parentPerms) === JSON.stringify(channelPerms) ? "S" : "Not s"}ynced to category` };
-				} catch (err) {
-					console.error("getDetails() ran into an error when getting permissions of a channel.", channel, err);
-					return { topic: channel.topic, categorySynced: "Category unknown." };
-				}
+				//Return with topic and sync property
+				return { topic: channel.topic, categorySynced: `${JSON.stringify(parentPerms) === JSON.stringify(channelPerms) ? "S" : "Not s"}ynced to category` };
+			} catch (err) {
+				console.error("getDetails() ran into an error when getting permissions of a channel.", channel, err);
+				return { topic: channel.topic, categorySynced: "Category unknown." };
 			}
-			//if not, simply return with a topic
-			return { topic: channel.topic };
 		}
+		//if not, simply return with a topic
+		return { topic: channel.topic };
 	}
 
 	/**
