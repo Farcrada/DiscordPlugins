@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.2.0
+ * @version 4.2.1
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.2.0",
+		version: "4.2.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -78,6 +78,9 @@ module.exports = class ChannelPermissions {
 	overflow-wrap: anywhere;
 	font-size: 12px;
 	margin-bottom: 10px;
+}
+.${config.constants.topicClass} > span > svg {
+	transform-scale: 10%;
 }`);
 
 			//Modules for the settings
@@ -121,6 +124,7 @@ module.exports = class ChannelPermissions {
 
 			//Store color converter (hex -> rgb) and d
 			this.hex2rgb = BdApi.findModuleByProps("getDarkness", "isValidHex").hex2rgb;
+			this.text2DiscordParser = BdApi.findModule(m => m.astParserFor && m.parse).parse;
 
 			this.sortObject = obj => Object.keys(obj).sort().reduce((res, key) => (res[key] = obj[key], res), {});
 
@@ -186,15 +190,7 @@ module.exports = class ChannelPermissions {
 				})));
 	}
 
-	stop() {
-		let CategoryChannel = BdApi.findModule(m => m?.DecoratedComponent?.type);
-		if (CategoryChannel)
-			if (CategoryChannel.DecoratedComponent.type?.__originalFunction)
-				CategoryChannel.DecoratedComponent.type = CategoryChannel.DecoratedComponent.type.__originalFunction;
-
-		BdApi.Patcher.unpatchAll(config.info.id);
-		BdApi.clearCSS(config.constants.cssStyle);
-	}
+	stop() { BdApi.Patcher.unpatchAll(config.info.id); BdApi.clearCSS(config.constants.cssStyle); }
 
 	patchThreadPopout() {
 		//The stores we use to reference from
@@ -495,10 +491,10 @@ module.exports = class ChannelPermissions {
 
 				//Start with the channel topic;
 				//Check if it has a topic and regex-replace any breakage with nothing.
-				topic && topic.replace(/[\t\n\r\s]/g, "") ?
+				topic.length > 0 ?
 					React.createElement("div", null, [
 						React.createElement("div", { className: this.roleListClasses.bodyTitle }, "Topic:"),
-						React.createElement("div", { className: config.constants.topicClass }, topic)
+						React.createElement("div", { className: config.constants.topicClass, "viewBox": "0 0 10 10" }, topic)
 					]) :
 					null
 
@@ -547,31 +543,31 @@ module.exports = class ChannelPermissions {
 
 		//Scuffed logic to get the last section and make it look nice.
 		//If anyone has any ideas to clean this up; hmu lmao
-		if (allowedElements["users"]?.length > 0)
-			if (deniedElements["roles"]?.length > 0)
-				if (deniedElements["users"]?.length > 0)
-					// aRoles - aUsers - dRoles - dUsers
-					deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true);
+		if (allowedUsers = this.createSection("users", "Allowed Users:", allowedElements))
+			if (deniedRoles = this.createSection("roles", "Denied Roles:", deniedElements))
+				if (deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true))
+					; // aRoles - aUsers - dRoles - dUsers
 				else
 					// aRoles - aUsers - dRoles
 					deniedRoles = this.createSection("roles", "Denied Roles:", deniedElements, true);
 			else
 				// aRoles - aUsers
 				allowedUsers = this.createSection("users", "Allowed Users:", allowedElements, true);
+
+
 		else
-			if (deniedElements["roles"]?.length > 0)
-				if (deniedElements["users"]?.length > 0)
-					// aRoles - dRoles - dUsers
-					deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true);
+			if (deniedRoles = this.createSection("roles", "Denied Roles:", deniedElements))
+				if (deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true))
+					;// aRoles - dRoles - dUsers
 				else
 					// aRoles - dRoles
 					deniedRoles = this.createSection("roles", "Denied Roles:", deniedElements, true);
+
 			else
-				if (deniedElements["users"]?.length > 0)
-					// aRoles - dUsers
-					deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true);
+				if (deniedUsers = this.createSection("users", "Denied Users:", deniedElements, true))
+					;// aRoles - dUsers
 				else
-					// aRoles
+					// aRoles (which means we're overriding our start with an end version)
 					allowedRoles = this.createSection("roles", "Allowed Roles:", allowedElements, true);
 
 		return [allowedRoles, allowedUsers, deniedRoles, deniedUsers];
@@ -722,14 +718,14 @@ module.exports = class ChannelPermissions {
 					channelPerms = this.sortObject(this.getPermissionsOfChannel(channel));
 
 				//Return with topic and sync property
-				return { topic: channel.topic, categorySynced: `${JSON.stringify(parentPerms) === JSON.stringify(channelPerms) ? "S" : "Not s"}ynced to category` };
+				return { topic: this.text2DiscordParser(channel.topic), categorySynced: `${JSON.stringify(parentPerms) === JSON.stringify(channelPerms) ? "S" : "Not s"}ynced to category` };
 			} catch (err) {
 				console.error("getDetails() ran into an error when getting permissions of a channel.", channel, err);
-				return { topic: channel.topic, categorySynced: "Category unknown." };
+				return { topic: this.text2DiscordParser(channel.topic), categorySynced: "Category unknown." };
 			}
 		}
 		//if not, simply return with a topic
-		return { topic: channel.topic };
+		return { topic: this.text2DiscordParser(channel.topic) };
 	}
 
 	/**
