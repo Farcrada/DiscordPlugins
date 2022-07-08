@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.2.1
+ * @version 4.2.2
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.2.1",
+		version: "4.2.2",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -95,7 +95,8 @@ module.exports = class ChannelPermissions {
 			this.categoryContainer = BdApi.findModuleByProps("spaceBeforeCategory", "containerDefault").containerDefault;
 
 			//Class collections
-			this.roleClasses = BdApi.findModuleByProps("roleCircle", "roleName", "roleRemoveIcon");
+			this.roleClasses = BdApi.findModule(m => m.role && m.roleName);
+			this.roleCircleClasses = BdApi.findModule(m => m.roleCircle);
 			this.roleListClasses = BdApi.findModuleByProps("rolesList");
 			this.popoutRootClasses = BdApi.findModuleByProps("container", "activity");
 			this.popoutBodyClasses = BdApi.findModuleByProps("thin", "scrollerBase");
@@ -526,7 +527,7 @@ module.exports = class ChannelPermissions {
 		return elements[type] && elements[type].length > 0 ?
 			React.createElement("div", null, [
 				React.createElement("div", { className: this.roleListClasses.bodyTitle }, title),
-				React.createElement("div", { className: `${this.roleClasses.root} ${this.roleListClasses.rolesList} ${this.roleListClasses.endBodySection}`, style: lastSection ? { 'margin-bottom': `unset` } : {} }, elements[type])
+				React.createElement("div", { className: `${this.roleClasses.root} ${this.roleListClasses.rolesList}`, style: lastSection ? { 'margin-bottom': `unset` } : {} }, elements[type])
 			]) :
 			null;
 	}
@@ -582,7 +583,7 @@ module.exports = class ChannelPermissions {
 	 */
 	createRoleElement(color, name, self = false) {
 		return React.createElement("div", { className: this.roleClasses.role, style: { "border-color": `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})` } }, [
-			React.createElement("div", { className: this.roleClasses.roleCircle, style: { 'background-color': `rgb(${color[0]}, ${color[1]}, ${color[2]})` } }),
+			React.createElement("div", { className: `${this.roleCircleClasses.roleCircle} ${this.roleCircleClasses.justifyCenter} ${this.roleCircleClasses.desaturateUserColors}`, style: { 'background-color': `rgb(${color[0]}, ${color[1]}, ${color[2]})` } }),
 			//And if you have the role
 			self ?
 				//Add the style to strikethrough
