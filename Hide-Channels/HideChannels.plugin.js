@@ -1,7 +1,7 @@
 /**
  * @name HideChannels
  * @author Farcrada
- * @version 2.2.0
+ * @version 2.2.1
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.2.0",
+		version: "2.2.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -46,7 +46,6 @@ module.exports = class HideChannels {
 	start() {
 		try {
 			//React components for settings
-			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
 			this.WindowInfoStore = BdApi.findModuleByProps("isFocused", "isElementFullScreen");
 			this.KeybindStore = BdApi.findModuleByProps("toCombo");
 
@@ -57,7 +56,7 @@ module.exports = class HideChannels {
 			this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
 			this.keybind = this.keybindSetting.split('+');
 
-			//Predefine current keybind
+			//Predefine for the eventlistener
 			this.currentlyPressed = {};
 
 			//Check if there is any CSS we have already, and remove it.
@@ -115,9 +114,12 @@ module.exports = class HideChannels {
 	}
 
 	getSettingsPanel() {
-		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. shown).
-		if (!this.KeybindRecorder)
+		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
+		//This also allows for a (delayed) call to retrieve a way to prompt a Form
+		if (!this.KeybindRecorder) {
 			this.KeybindRecorder = BdApi.findModuleByDisplayName("KeybindRecorder");
+			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
+		}
 
 		//Return our keybind settings wrapped in a form item
 		return React.createElement(this.FormItem, {
@@ -125,9 +127,12 @@ module.exports = class HideChannels {
 		},
 			//Containing a keybind recorder.
 			React.createElement(this.KeybindRecorder, {
+				//The `keyup` and `keydown` events register the Ctrl key different
+				//We need to accomodate for that
 				defaultValue: this.KeybindStore.toCombo(this.keybindSetting.replace("control", "ctrl")),
 				onChange: (e) => {
 					//Convert the keybind to current locale
+					//Once again accomodate for event differences
 					const keybindString = this.KeybindStore.toString(e).toLowerCase().replace("ctrl", "control");
 
 					//Set the keybind and save it.
@@ -162,11 +167,14 @@ module.exports = class HideChannels {
 			//because if not we'll render a button on the split view.
 
 			//Also: Prevent thread button appearing with this first line.
-			if (Array.isArray(methodArguments[0]?.children))
-				//Make sure our component isn't already present.
-				if (methodArguments[0].children.filter?.(child => child?.key === config.info.id).length < 1)
-					//And since we want to be on the most left of the header bar for style we unshift into the array.
-					methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.id }));
+			if (Array.isArray(methodArguments[0]?.children)) {
+				//Make sure we're on the "original" headerbar and not that of a Voice channel's chat.
+				if (methodArguments[0].children.some?.(child => child?.type?.displayName === "HeaderGuildBreadcrumb"))
+					//Make sure our component isn't already present.
+					if (!methodArguments[0].children.some?.(child => child?.key === config.info.id))
+						//And since we want to be on the most left of the header bar for style we unshift into the array.
+						methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.id }));
+			}
 		});
 	}
 
