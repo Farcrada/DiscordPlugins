@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.2.2
+ * @version 4.2.3
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.2.2",
+		version: "4.2.3",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -404,13 +404,13 @@ module.exports = class ChannelPermissions {
 	/**
 	 * 
 	 * @param {object} props React props
-	 * @param {object} props.popoutDelay 
+	 * @param {object} props.popoutDelay Hover delay
 	 * @param {number} props.popoutDelay.open Delay from hovering to opening a popout
 	 * @param {number} props.popoutDelay.close Delay from exiting a hover to closing a popout
 	 * @param {object} props.decendants The children that have been rendered
 	 * @param {object} props.channel The channel object
 	 * @param {object} props.parentProps The parent's props to attach mouse events to
-	 * @param {object} props.modules 
+	 * @param {object} props.modules Component modules needed to escape the `this` scope.
 	 * @param {object} props.modules.popout Popout module to instantiate a new popout component
 	 * @param {object} props.modules.activeThreads Component that TextChannels use to fill a popout component
 	 * @returns Popout with supplied decendants/children
@@ -475,9 +475,13 @@ module.exports = class ChannelPermissions {
 	 */
 	ChannelTooltipComponent(props) {
 		//Destructure all the elements from the specific channel
-		const { channel, voice = false, otherActivity = false } = props,
-			{ allowedElements,
-				deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id).roles, channel),
+		const { channel, voice = false, otherActivity = false } = props;
+		//Check if this channel is a (group) DM
+		if (channel.isDM() || channel.isGroupDM())
+			return null;
+
+		const { allowedElements,
+			deniedElements } = this.getPermissionElements(this.getGuild(channel.guild_id).roles, channel),
 			//Get our channel details
 			{ topic,
 				categorySynced } = this.getDetails(channel),
