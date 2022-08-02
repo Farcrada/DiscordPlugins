@@ -209,7 +209,8 @@ module.exports = class ChannelPermissions {
 		//We fucked with the type so we need to replace this aswell.
 		function useActiveThreads(channel) {
 			//We don't want accidental mishaps with voice channels
-			if (channel.isVocal())
+			// 2 = GUILD_VOICE, 13 = GUILD_STAGE_VOICE
+			if ([ 2, 13 ].includes(channel.type))
 				return [];
 
 			//This is a react hook married with flux
@@ -477,7 +478,8 @@ module.exports = class ChannelPermissions {
 		//Destructure all the elements from the specific channel
 		const { channel, voice = false, otherActivity = false } = props;
 		//Check if this channel is a (group) DM
-		if (channel.isDM() || channel.isGroupDM())
+		// 1 = DM, 3 = GROUP_DM
+		if (channel.type === 1 || channel.type === 3)
 			return null;
 
 		const { allowedElements,
