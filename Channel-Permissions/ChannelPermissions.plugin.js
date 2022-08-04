@@ -1,7 +1,7 @@
 /**
  * @name ChannelPermissions
  * @author Farcrada
- * @version 4.2.3
+ * @version 4.2.4
  * @description Hover over channels to view their required permissions. Massive thanks to Strencher for the help.
  * 
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Channel Permissions",
 		id: "ChannelPermissions",
 		description: "Hover over channels to view their required permissions. Massive thanks to Strencher for the help.",
-		version: "4.2.3",
+		version: "4.2.4",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Channel-Permissions/ChannelPermissions.plugin.js"
 	},
@@ -209,7 +209,7 @@ module.exports = class ChannelPermissions {
 		//We fucked with the type so we need to replace this aswell.
 		function useActiveThreads(channel) {
 			//We don't want accidental mishaps with voice channels
-			if (channel.isVocal())
+			if (channel.isGuildVocal())
 				return [];
 
 			//This is a react hook married with flux
