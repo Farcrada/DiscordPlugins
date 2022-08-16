@@ -1,7 +1,7 @@
 /**
  * @name RightClickJoin
  * @author Farcrada
- * @version 1.4.0
+ * @version 1.4.1
  * @description Right click a user to join a voice channel they are in.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -16,7 +16,7 @@ const config = {
 		id: "RightClickJoin",
 		menuID: "right-click-join",
 		description: "Right click a user to join a voice channel they are in.",
-		version: "1.4.0",
+		version: "1.4.1",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
 	}
@@ -29,7 +29,7 @@ class RightClickJoin {
 
 
 	load() {
-		if (!global.ZeresPluginLibrary) {
+		if (!global.ZeresPluginLibrary)
 			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
 				confirmText: "Download Now",
 				cancelText: "Cancel",
@@ -42,28 +42,9 @@ class RightClickJoin {
 						});
 				}
 			});
-		}
-
-		//First try the updater
-		try {
-			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-		}
-		catch (err) {
-			console.error(this.getName(), "Plugin Updater could not be reached, attempting to enable plugin.", err);
-			try {
-				BdApi.Plugins.enable("ZeresPluginLibrary");
-				if (!BdApi.Plugins.isEnabled("ZeresPluginLibrary"))
-					throw new Error("Failed to enable ZeresPluginLibrary.");
-
-				global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-			}
-			catch (err) {
-				console.error(this.getName(), "Failed to enable ZeresPluginLibrary for Plugin Updater.", err);
-
-				BdApi.alert("Could not enable or find ZeresPluginLibrary",
-					"Could not start the plugin because ZeresPluginLibrary could not be found or enabled. Please enable and/or download it manually into your plugins folder.");
-			}
-		}
+		else
+			try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
+			catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
 	}
 
 	start() {
@@ -75,7 +56,7 @@ class RightClickJoin {
 			this.fetchProfile = BdApi.findModuleByProps("fetchProfile").fetchProfile;
 			this.useStateFromStores = BdApi.findModuleByProps("useStateFromStores").useStateFromStores;
 
-			this.Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
+			this.Dispatcher = BdApi.findModuleByProps("isDispatching");
 			this.MutualStore = BdApi.findModuleByProps("isFetching", "getUserProfile");
 
 			//Context controls (mainly just the one item we insert)
