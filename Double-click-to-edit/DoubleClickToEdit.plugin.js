@@ -1,7 +1,7 @@
 /**
  * @name DoubleClickToEdit
  * @author Farcrada
- * @version 9.3.5
+ * @version 9.3.6
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins/
@@ -17,7 +17,7 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.5",
+		version: "9.3.6",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
@@ -63,7 +63,7 @@ module.exports = class DoubleClickToEdit {
 			this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
 
 			//Settings
-			this.SwitchItem = BdApi.findModuleByDisplayName("SwitchItem");
+			this.SwitchItem = BdApi.findModule(m => m.toString().includes("t=e.value,r=e.disabled"))
 
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
@@ -92,30 +92,19 @@ module.exports = class DoubleClickToEdit {
 		//which also makes it an anonymous functional component;
 		//Pretty neat.
 		return () => {
-			//Since inherently when you toggle something you need to know what you're toggling from
-			//because of this instead of using useState you'd use useReducer
-			const [state, dispatch] = React.useReducer(currentState => {
-				//This runs when you flick the switch
-				//Starting with reversing the current state:
-				const newState = !currentState;
-
-				//Saving the new state
-				this.doubleClickToReplySetting = newState;
-
-				BdApi.saveData(config.info.id, "doubleClickToReplySetting", newState);
-
-				//Returning the new state
-				return newState;
-
-				//Default value
-			}, this.doubleClickToReplySetting)
+			const [state, setState] = React.useState(this.doubleClickToReplySetting);
 
 			return React.createElement(this.SwitchItem, {
 				//The state that is loaded with the default value
 				value: state,
 				note: "Enable to double click another's message and start replying.",
 				//Since onChange passes the current state we can simply invoke it as such
-				onChange: () => console.log("clicked switch item")
+				onChange: (newState) => {
+					//Saving the new state
+					this.doubleClickToReplySetting = newState;
+					BdApi.saveData(config.info.id, "doubleClickToReplySetting", newState);
+					setState(newState);
+				}
 				//Discord Is One Of Those
 			}, "Enable Replying");
 		}
