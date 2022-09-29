@@ -1,7 +1,7 @@
 /**
- * @name HideChannels
+ * @name Hide Channels
  * @author Farcrada
- * @version 2.2.2
+ * @version 2.2.3
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -13,12 +13,15 @@
 /** @type {typeof import("react")} */
 const React = BdApi.React;
 
+/** @type {typeof import("react-dom")} */
+const ReactDOM = BdApi.ReactDOM;
+
 const config = {
 	info: {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.2.2",
+		version: "2.2.3",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -34,8 +37,6 @@ const config = {
 
 
 module.exports = class HideChannels {
-	//I like my spaces.
-	getName() { return config.info.name; }
 
 
 	load() {
@@ -47,10 +48,14 @@ module.exports = class HideChannels {
 		try {
 			//React components for settings
 			this.WindowInfoStore = BdApi.findModuleByProps("isFocused", "isElementFullScreen");
-			this.KeybindStore = BdApi.findModuleByProps("toCombo");
+			//this.KeybindStore = BdApi.findModuleByProps("toCombo");
+
+			this.KeybindToCombo = BdApi.findModule(m => m?.toString?.()?.includes("numpad plus"));
+			this.KeybindToString = BdApi.findModule(m => m?.toString?.()?.includes("r.join(\"+\")"));
 
 			//The sidebar to "minimize"/hide
 			this.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
+			this.headerBarClass = BdApi.findModuleByProps("chat", "title").title
 
 			//And the keybind
 			this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
@@ -58,6 +63,14 @@ module.exports = class HideChannels {
 
 			//Predefine for the eventlistener
 			this.currentlyPressed = {};
+
+
+			//Create our button, and fetch it's home.
+			this.buttonDiv = document.createElement('div');
+			//Set ID for easy targeting.
+			this.buttonDiv.setAttribute('id', config.constants.buttonID);
+			ReactDOM.render(React.createElement(this.hideChannelComponent), this.buttonDiv)
+
 
 			//Check if there is any CSS we have already, and remove it.
 			BdApi.clearCSS(config.constants.cssStyle);
@@ -100,7 +113,8 @@ module.exports = class HideChannels {
 }`);
 
 			//Render the button and we're off to the races!
-			this.patchTitleBar();
+			//this.patchTitleBar();
+			this.renderButton();
 		}
 		catch (err) {
 			try {
@@ -117,23 +131,23 @@ module.exports = class HideChannels {
 		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
-			this.KeybindRecorder = BdApi.findModuleByDisplayName("KeybindRecorder");
-			this.FormItem = BdApi.findModuleByProps("FormItem").FormItem;
+			this.KeybindRecorder = BdApi.findModule(m => m.prototype?.cleanUp); //BdApi.findModuleByDisplayName("KeybindRecorder");
+			this.FormItem = BdApi.findModuleByProps("Tags", "Sizes");
 		}
 
 		//Return our keybind settings wrapped in a form item
 		return React.createElement(this.FormItem, {
-			title: "Toggle by keybind:"
-		},
+			tag: "h5"
+		}, "Toggle by keybind:",
 			//Containing a keybind recorder.
 			React.createElement(this.KeybindRecorder, {
 				//The `keyup` and `keydown` events register the Ctrl key different
 				//We need to accomodate for that
-				defaultValue: this.KeybindStore.toCombo(this.keybindSetting.replace("control", "ctrl")),
+				defaultValue: this.KeybindToCombo(this.keybindSetting.replace("control", "ctrl")),
 				onChange: (e) => {
 					//Convert the keybind to current locale
 					//Once again accomodate for event differences
-					const keybindString = this.KeybindStore.toString(e).toLowerCase().replace("ctrl", "control");
+					const keybindString = this.KeybindToString(e).toLowerCase().replace("ctrl", "control");
 
 					//Set the keybind and save it.
 					BdApi.saveData(config.info.id, "keybind", keybindString);
@@ -155,16 +169,42 @@ module.exports = class HideChannels {
 		let sidebar = document.querySelector(`.${this.sidebarClass}`);
 		if (sidebar?.classList.contains(config.constants.hideElementsName))
 			sidebar.classList.remove(config.constants.hideElementsName);
+
+		ReactDOM.unmountComponentAtNode(this.buttonDiv);
+		this.buttonDiv.remove();
+	}
+
+	onSwitch() {
+		if (document.getElementById(config.constants.buttonID))
+			return;
+
+		this.renderButton();
+	}
+
+	//Creation and appending our button, i.e. rendering.
+	renderButton() {
+		let headerBar = document.querySelector(`.${this.headerBarClass}`);
+
+		//If there is no title bar, dump
+		if (!headerBar)
+			return;
+
+		//Insert it nested, so it all looks uniform
+		headerBar.firstChild.insertBefore(this.buttonDiv, headerBar.firstChild.firstChild);
 	}
 
 	patchTitleBar() {
 		//The header bar above the "chat"; this is the same for the `Split View`.
 		const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 
-		BdApi.Patcher.before(config.info.id, HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
+		BdApi.Patcher.before(config.info.id, HeaderBar, "render", (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array;
 			//because if not we'll render a button on the split view.
+
+			console.log(thisObject, methodArguments, returnValue);
+
+			return;
 
 			//Also: Prevent thread button appearing with this first line.
 			if (Array.isArray(methodArguments[0]?.children))
@@ -238,7 +278,7 @@ module.exports = class HideChannels {
 		//Keydown event
 		useListener("keydown", e => {
 			//Since we made this an object,
-			//we can make new propertire with `[]`
+			//we can make new properties with `[]`
 			this.currentlyPressed[e.key.toLowerCase()] = true;
 
 			//Account for bubbling and attach to the global: `window`
@@ -296,15 +336,15 @@ module.exports = class HideChannels {
 			if (typeof (keybindToLoad) === typeof (defaultKeybind)) {
 				keybindToLoad = keybindToLoad.toLowerCase().replace("control", "ctrl");
 				//Does it go into a combo? (i.e.: is it the correct format?)
-				if (this.KeybindStore.toCombo(keybindToLoad))
+				if (this.KeybindToCombo(keybindToLoad))
 					return keybindToLoad.replace("ctrl", "control");
 				else
 					return defaultKeybind;
 			}
 			else
 				//If it's not a string, check if it's a combo.
-				if (this.KeybindStore.toString(keybindToLoad))
-					return this.KeybindStore.toString(keybindToLoad).toLowerCase().replace("ctrl", "control");
+				if (this.KeybindToString(keybindToLoad))
+					return this.KeybindToString(keybindToLoad).toLowerCase().replace("ctrl", "control");
 		}
 		catch (e) { return defaultKeybind; }
 	}
