@@ -1,13 +1,14 @@
 /**
- * @name DoubleClickToEdit
- * @author Farcrada
- * @version 9.3.6
+ * @name Double Click To Edit
+ * @author Farcrada, original idea by Jiiks
+ * @version 9.3.7
  * @description Double click a message you wrote to quickly edit it.
  * 
+ * @invite qH6UWCwfTu
  * @website https://github.com/Farcrada/DiscordPlugins/
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js
-*/
+ */
 
 /** @type {typeof import("react")} */
 const React = BdApi.React;
@@ -17,7 +18,7 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.6",
+		version: "9.3.7",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
@@ -35,10 +36,6 @@ const blacklist = [
 
 module.exports = class DoubleClickToEdit {
 
-	//I like my spaces. 
-	getName() { return config.info.name; }
-	getAuthor() { return `${config.info.author}, original idea by Jiiks`; }
-
 
 	load() {
 		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
@@ -55,7 +52,7 @@ module.exports = class DoubleClickToEdit {
 			this.copyToClipboard = BdApi.findModuleByProps("clipboard").clipboard.copy;
 
 			//Reply functions
-			this.replyToMessage = BdApi.findModule(m => m.toString().includes("_.S.dispatchToLastSubscribed(S.CkL.TEXTAREA_FOCUS)"));
+			this.replyToMessage = BdApi.findModule(m => m.toString().includes("dispatchToLastSubscribed("));
 			this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
 
 			//Stores
