@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.3
+ * @version 2.2.4
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -21,7 +21,7 @@ const config = {
 		name: "Hide Channels",
 		id: "HideChannels",
 		description: "Hide channel list from view.",
-		version: "2.2.3",
+		version: "2.2.4",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 	},
@@ -113,7 +113,6 @@ module.exports = class HideChannels {
 }`);
 
 			//Render the button and we're off to the races!
-			//this.patchTitleBar();
 			this.renderButton();
 		}
 		catch (err) {
@@ -159,8 +158,6 @@ module.exports = class HideChannels {
 	}
 
 	stop() {
-		BdApi.Patcher.unpatchAll(config.info.id);
-
 		//Our CSS
 		BdApi.clearCSS(config.constants.cssStyle);
 
@@ -191,30 +188,6 @@ module.exports = class HideChannels {
 
 		//Insert it nested, so it all looks uniform
 		headerBar.firstChild.insertBefore(this.buttonDiv, headerBar.firstChild.firstChild);
-	}
-
-	patchTitleBar() {
-		//The header bar above the "chat"; this is the same for the `Split View`.
-		const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
-
-		BdApi.Patcher.before(config.info.id, HeaderBar, "render", (thisObject, methodArguments, returnValue) => {
-			//When elements are being re-rendered we need to check if there actually is a place for us.
-			//Along with that we need to check if what we're adding to is an array;
-			//because if not we'll render a button on the split view.
-
-			console.log(thisObject, methodArguments, returnValue);
-
-			return;
-
-			//Also: Prevent thread button appearing with this first line.
-			if (Array.isArray(methodArguments[0]?.children))
-				//Make sure we're on the "original" headerbar and not that of a Voice channel's chat.
-				if (methodArguments[0].children.some?.(child => child?.type?.displayName === "HeaderGuildBreadcrumb" || child?.type?.displayName === "Title"))
-					//Make sure our component isn't already present.
-					if (!methodArguments[0].children.some?.(child => child?.key === config.info.id))
-						//And since we want to be on the most left of the header bar for style we unshift into the array.
-						methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.id }));
-		});
 	}
 
 	/**
