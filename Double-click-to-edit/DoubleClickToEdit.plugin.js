@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.3.8
+ * @version 9.3.9
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -18,7 +18,7 @@ const config = {
 		name: "Double Click To Edit",
 		id: "DoubleClickToEdit",
 		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.8",
+		version: "9.3.9",
 		author: "Farcrada",
 		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 	}
@@ -65,7 +65,9 @@ module.exports = class DoubleClickToEdit {
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
 
+			//Load settings
 			this.doubleClickToReplySetting = BdApi.loadData(config.info.id, "doubleClickToReplySetting") ?? false;
+			this.copyBeforeAction = BdApi.loadData(config.info.id, "copyBeforeAction") ?? false;
 		}
 		catch (err) {
 			try {
@@ -89,21 +91,37 @@ module.exports = class DoubleClickToEdit {
 		//which also makes it an anonymous functional component;
 		//Pretty neat.
 		return () => {
-			const [state, setState] = React.useState(this.doubleClickToReplySetting);
+			const [replyState, setReplyState] = React.useState(this.doubleClickToReplySetting);
+			const [copyState, setCopyState] = React.useState(this.copyBeforeAction);
 
-			return React.createElement(this.SwitchItem, {
-				//The state that is loaded with the default value
-				value: state,
-				note: "Enable to double click another's message and start replying.",
-				//Since onChange passes the current state we can simply invoke it as such
-				onChange: (newState) => {
-					//Saving the new state
-					this.doubleClickToReplySetting = newState;
-					BdApi.saveData(config.info.id, "doubleClickToReplySetting", newState);
-					setState(newState);
-				}
-				//Discord Is One Of Those
-			}, "Enable Replying");
+			return [
+				React.createElement(this.SwitchItem, {
+					//The state that is loaded with the default value
+					value: replyState,
+					note: "Double click another's message and start replying.",
+					//Since onChange passes the current state we can simply invoke it as such
+					onChange: (newState) => {
+						//Saving the new state
+						this.doubleClickToReplySetting = newState;
+						BdApi.saveData(config.info.id, "doubleClickToReplySetting", newState);
+						setReplyState(newState);
+					}
+					//Discord Is One Of Those
+				}, "Enable Replying"),
+				React.createElement(this.SwitchItem, {
+					//The state that is loaded with the default value
+					value: copyState,
+					note: "Copy selection before entering edit-mode.",
+					//Since onChange passes the current state we can simply invoke it as such
+					onChange: (newState) => {
+						//Saving the new state
+						this.copyBeforeAction = newState;
+						BdApi.saveData(config.info.id, "copyBeforeAction", newState);
+						setCopyState(newState);
+					}
+					//Discord Is One Of Those
+				}, "Enable Copying")
+			];
 		}
 	}
 
@@ -131,7 +149,6 @@ module.exports = class DoubleClickToEdit {
 
 		//When selecting text it might be handy to have it auto-copy.
 		if (this.copyBeforeAction)
-			if (this.copyBeforeActionModifier)
 				this.copyToClipboard(document.getSelection().toString());
 
 		//The message instance is filled top to bottom, as it is in view.
