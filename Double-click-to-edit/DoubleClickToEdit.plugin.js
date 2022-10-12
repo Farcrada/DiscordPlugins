@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.3.9
+ * @version 9.4.0
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -11,18 +11,21 @@
  */
 
 /** @type {typeof import("react")} */
-const React = BdApi.React;
+const React = BdApi.React,
 
-const config = {
-	info: {
-		name: "Double Click To Edit",
-		id: "DoubleClickToEdit",
-		description: "Double click a message you wrote to quickly edit it",
-		version: "9.3.9",
-		author: "Farcrada",
-		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
-	}
-};
+	Webpack = BdApi.Webpack,
+	Filters = BdApi.Webpack.Filters,
+
+	config = {
+		info: {
+			name: "Double Click To Edit",
+			id: "DoubleClickToEdit",
+			description: "Double click a message you wrote to quickly edit it",
+			version: "9.4.0",
+			author: "Farcrada",
+			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
+		}
+	};
 
 const blacklist = [
 	//Object
@@ -49,18 +52,20 @@ module.exports = class DoubleClickToEdit {
 			this.messagesWrapper = BdApi.findModuleByProps("empty", "messagesWrapper").messagesWrapper;
 
 			//Copy to clipboard
-			this.copyToClipboard = BdApi.findModuleByProps("clipboard").clipboard.copy;
+			this.copyToClipboard = BdApi.findModuleByProps("clipboard", "app").clipboard.copy;
 
 			//Reply functions
-			this.replyToMessage = BdApi.findModule(m => m.toString().includes("dispatchToLastSubscribed("));
-			this.getChannel = BdApi.findModuleByProps("getChannel", "getDMFromUserId").getChannel;
+			this.replyToMessage = Webpack.getModule(Filters.byStrings("dispatchToLastSubscribed(", "isPrivate()"), { searchExports: true });
+			this.getChannel = Webpack.getModule(Filters.byProps("getChannel", "getDMFromUserId")).getChannel;
 
 			//Stores
 			this.MessageStore = BdApi.findModuleByProps("receiveMessage", "editMessage");
 			this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
+			this.Dispatcher = BdApi.findModule(m => m.dispatch && m._interceptor);
+			this.UserStore = BdApi.findModuleByProps("getUser", "getUsers");
 
 			//Settings
-			this.SwitchItem = BdApi.findModule(m => m.toString().includes("t=e.value,r=e.disabled"))
+			this.SwitchItem = BdApi.findModule(m => m.toString().includes("t=e.value,r=e.disabled"));
 
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
@@ -71,7 +76,7 @@ module.exports = class DoubleClickToEdit {
 		}
 		catch (err) {
 			try {
-				console.error("Attempting to stop after starting error...", err)
+				console.error("Attempting to stop after starting error...", err);
 				this.stop();
 			}
 			catch (err) {
@@ -91,8 +96,8 @@ module.exports = class DoubleClickToEdit {
 		//which also makes it an anonymous functional component;
 		//Pretty neat.
 		return () => {
-			const [replyState, setReplyState] = React.useState(this.doubleClickToReplySetting);
-			const [copyState, setCopyState] = React.useState(this.copyBeforeAction);
+			const [replyState, setReplyState] = React.useState(this.doubleClickToReplySetting),
+				[copyState, setCopyState] = React.useState(this.copyBeforeAction);
 
 			return [
 				React.createElement(this.SwitchItem, {
@@ -149,18 +154,20 @@ module.exports = class DoubleClickToEdit {
 
 		//When selecting text it might be handy to have it auto-copy.
 		if (this.copyBeforeAction)
-				this.copyToClipboard(document.getSelection().toString());
+			this.copyToClipboard(document.getSelection().toString());
 
 		//The message instance is filled top to bottom, as it is in view.
 		//As a result, "baseMessage" will be the actual message you want to address. And "message" will be the reply.
 		//Maybe the message has a reply, so check if "baseMessage" exists and otherwise fallback on "message".
 		const message = this.getValueFromKey(instance, "baseMessage") ?? this.getValueFromKey(instance, "message");
 
-		if (message)
-			if (message.author.id === this.CurrentUserStore.getCurrentUser().id)
-				this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
-			else if (this.doubleClickToReplySetting)
-				this.replyToMessage(this.getChannel(message.channel_id), message, e);
+		if (!message)
+			return;
+
+		if (message.author.id === this.CurrentUserStore.getCurrentUser().id)
+			this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
+		else if (this.doubleClickToReplySetting)
+			this.replyToMessage(this.getChannel(message.channel_id), message, e);
 	}
 
 	getValueFromKey(instance, searchkey) {
