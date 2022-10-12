@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.4
+ * @version 2.2.5
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -11,29 +11,32 @@
  */
 
 /** @type {typeof import("react")} */
-const React = BdApi.React;
+const React = BdApi.React,
 
-/** @type {typeof import("react-dom")} */
-const ReactDOM = BdApi.ReactDOM;
+	/** @type {typeof import("react-dom")} */
+	ReactDOM = BdApi.ReactDOM,
 
-const config = {
-	info: {
-		name: "Hide Channels",
-		id: "HideChannels",
-		description: "Hide channel list from view.",
-		version: "2.2.4",
-		author: "Farcrada",
-		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
-	},
-	constants: {
-		//The names we need for CSS
-		cssStyle: "HideChannelsStyle",
-		hideElementsName: "hideChannelElement",
-		buttonID: "toggleChannels",
-		buttonHidden: "channelsHidden",
-		buttonVisible: "channelsVisible"
+	Webpack = BdApi.Webpack,
+	Filters = BdApi.Webpack.Filters,
+
+	config = {
+		info: {
+			name: "Hide Channels",
+			id: "HideChannels",
+			description: "Hide channel list from view.",
+			version: "2.2.5",
+			author: "Farcrada",
+			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
+		},
+		constants: {
+			//The names we need for CSS
+			cssStyle: "HideChannelsStyle",
+			hideElementsName: "hideChannelElement",
+			buttonID: "toggleChannels",
+			buttonHidden: "channelsHidden",
+			buttonVisible: "channelsVisible"
+		}
 	}
-}
 
 
 module.exports = class HideChannels {
@@ -47,15 +50,14 @@ module.exports = class HideChannels {
 	start() {
 		try {
 			//React components for settings
-			this.WindowInfoStore = BdApi.findModuleByProps("isFocused", "isElementFullScreen");
-			//this.KeybindStore = BdApi.findModuleByProps("toCombo");
+			this.WindowInfoStore = Webpack.getModule(Filters.byProps("isFocused", "isElementFullScreen"));
 
-			this.KeybindToCombo = BdApi.findModule(m => m?.toString?.()?.includes("numpad plus"));
-			this.KeybindToString = BdApi.findModule(m => m?.toString?.()?.includes("r.join(\"+\")"));
+			this.KeybindToCombo = Webpack.getModule(Filters.byStrings("numpad plus"), { searchExports: true });
+			this.KeybindToString = Webpack.getModule(Filters.byStrings(".join(\"+\")"), { searchExports: true });
 
 			//The sidebar to "minimize"/hide
-			this.sidebarClass = BdApi.findModuleByProps("container", "base").sidebar;
-			this.headerBarClass = BdApi.findModuleByProps("chat", "title").title
+			this.sidebarClass = Webpack.getModule(Filters.byProps("container", "base")).sidebar;
+			this.headerBarClass = Webpack.getModule(Filters.byProps("chat", "title")).title;
 
 			//And the keybind
 			this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
@@ -63,14 +65,6 @@ module.exports = class HideChannels {
 
 			//Predefine for the eventlistener
 			this.currentlyPressed = {};
-
-
-			//Create our button, and fetch it's home.
-			this.buttonDiv = document.createElement('div');
-			//Set ID for easy targeting.
-			this.buttonDiv.setAttribute('id', config.constants.buttonID);
-			ReactDOM.render(React.createElement(this.hideChannelComponent), this.buttonDiv)
-
 
 			//Check if there is any CSS we have already, and remove it.
 			BdApi.clearCSS(config.constants.cssStyle);
@@ -113,7 +107,7 @@ module.exports = class HideChannels {
 }`);
 
 			//Render the button and we're off to the races!
-			this.renderButton();
+			this.patchTitleBar();
 		}
 		catch (err) {
 			try {
@@ -130,8 +124,8 @@ module.exports = class HideChannels {
 		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
-			this.KeybindRecorder = BdApi.findModule(m => m.prototype?.cleanUp); //BdApi.findModuleByDisplayName("KeybindRecorder");
-			this.FormItem = BdApi.findModuleByProps("Tags", "Sizes");
+			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp); //BdApi.findModuleByDisplayName("KeybindRecorder");
+			this.FormItem = Webpack.getModule(Filters.byProps("Tags", "Sizes"));
 		}
 
 		//Return our keybind settings wrapped in a form item
@@ -158,6 +152,8 @@ module.exports = class HideChannels {
 	}
 
 	stop() {
+		BdApi.Patcher.unpatchAll(config.info.id);
+
 		//Our CSS
 		BdApi.clearCSS(config.constants.cssStyle);
 
@@ -166,28 +162,36 @@ module.exports = class HideChannels {
 		let sidebar = document.querySelector(`.${this.sidebarClass}`);
 		if (sidebar?.classList.contains(config.constants.hideElementsName))
 			sidebar.classList.remove(config.constants.hideElementsName);
-
-		ReactDOM.unmountComponentAtNode(this.buttonDiv);
-		this.buttonDiv.remove();
 	}
 
-	onSwitch() {
-		if (document.getElementById(config.constants.buttonID))
-			return;
+	patchTitleBar() {
+		//The header bar above the "chat"; this is the same for the `Split View`.
+		//const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
+		const filter = f => f?.Title && f?.Caret,
+			target = Webpack.getModule(m => Object.values(m).some(filter)),
+			HeaderBar = [target, Object.keys(target).find(k => filter(target[k]))];
 
-		this.renderButton();
-	}
+		BdApi.Patcher.before(config.info.id, ...HeaderBar, (thisObject, methodArguments, returnValue) => {
+			//When elements are being re-rendered we need to check if there actually is a place for us.
+			//Along with that we need to check if what we're adding to is an array.
 
-	//Creation and appending our button, i.e. rendering.
-	renderButton() {
-		let headerBar = document.querySelector(`.${this.headerBarClass}`);
+			if (Array.isArray(methodArguments[0]?.children))
 
-		//If there is no title bar, dump
-		if (!headerBar)
-			return;
+				if (methodArguments[0].children.some?.(child =>
+					//Make sure we're on the "original" headerbar and not that of a Voice channel's chat, or thread.
+					child?.props?.channel ||
+					//The friends page
+					child?.type?.Header ||
+					//The Nitro page
+					child?.props?.children === "Nitro"))
 
-		//Insert it nested, so it all looks uniform
-		headerBar.firstChild.insertBefore(this.buttonDiv, headerBar.firstChild.firstChild);
+					//Make sure our component isn't already present.
+					if (!methodArguments[0].children.some?.(child => child?.key === config.info.id))
+						//And since we want to be on the most left of the header bar for style we unshift into the array.
+						methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.id }));
+
+
+		});
 	}
 
 	/**
@@ -209,7 +213,7 @@ module.exports = class HideChannels {
 		 * @param {boolean} bubbling Handle bubbling or not
 		 * @param {object} [target] The object to attach our listener to.
 		 */
-		function useListener(eventName, callback, bubbling, target = document) {
+		function useListener(eventName, callback, bubbling, target = window) {
 			React.useEffect(() => {
 				//ComponentDidMount
 				target.addEventListener(eventName, callback, bubbling);
@@ -226,14 +230,15 @@ module.exports = class HideChannels {
 		}
 
 		/**
-		 * Adds and removes our CSS to make our sidebar appear and disappear.
 		 * @param {Node} sidebar Sidebar node we want to toggle.
 		 * @returns The passed state in reverse.
 		 */
 		function toggleSidebar(sidebar) {
 
 			/**
+			 * Adds and removes our CSS to make our sidebar appear and disappear.
 			 * @param {boolean} state State that determines the toggle.
+			 * @returns The passed state in reverse.
 			 */
 			return state => {
 				//If it is showing, we need to hide it.
@@ -254,8 +259,8 @@ module.exports = class HideChannels {
 			//we can make new properties with `[]`
 			this.currentlyPressed[e.key.toLowerCase()] = true;
 
-			//Account for bubbling and attach to the global: `window`
-		}, true, window);
+			//Account for bubbling
+		}, true);
 
 		//Keyup event
 		useListener("keyup", e => {
@@ -267,8 +272,8 @@ module.exports = class HideChannels {
 			//Current key goes up, so...
 			this.currentlyPressed[e.key.toLowerCase()] = false;
 
-			//Account for bubbling and attach to the global: `window`
-		}, true, window);
+			//Account for bubbling
+		}, true);
 
 		//Lose focus event
 		useWindowChangeListener(this.WindowInfoStore, () => {
@@ -281,8 +286,6 @@ module.exports = class HideChannels {
 		return React.createElement("div", {
 			//Styling
 			id: config.constants.buttonID,
-			//To identify our object
-			key: "hideChannelComponent",
 			//The icon
 			className: hidden ? config.constants.buttonHidden : config.constants.buttonVisible,
 			//Toggle the sidebar and rerender on toggle; change the state.
