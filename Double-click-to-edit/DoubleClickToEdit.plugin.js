@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.0
+ * @version 9.4.1
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -21,7 +21,7 @@ const React = BdApi.React,
 			name: "Double Click To Edit",
 			id: "DoubleClickToEdit",
 			description: "Double click a message you wrote to quickly edit it",
-			version: "9.4.0",
+			version: "9.4.1",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 		}
@@ -48,24 +48,27 @@ module.exports = class DoubleClickToEdit {
 	start() {
 		try {
 			//Classes
-			this.selectedClass = BdApi.findModuleByProps("message", "selected").selected;
-			this.messagesWrapper = BdApi.findModuleByProps("empty", "messagesWrapper").messagesWrapper;
+			this.selectedClass = Webpack.getModule(Filters.byProps("message", "selected")).selected;
+			this.messagesWrapper = Webpack.getModule(Filters.byProps("empty", "messagesWrapper")).messagesWrapper;
 
 			//Copy to clipboard
-			this.copyToClipboard = BdApi.findModuleByProps("clipboard", "app").clipboard.copy;
+			this.copyToClipboard = Webpack.getModule(Filters.byProps("clipboard", "app")).clipboard.copy;
 
 			//Reply functions
 			this.replyToMessage = Webpack.getModule(Filters.byStrings("dispatchToLastSubscribed(", "isPrivate()"), { searchExports: true });
 			this.getChannel = Webpack.getModule(Filters.byProps("getChannel", "getDMFromUserId")).getChannel;
 
 			//Stores
-			this.MessageStore = BdApi.findModuleByProps("receiveMessage", "editMessage");
-			this.CurrentUserStore = BdApi.findModuleByProps("getCurrentUser");
-			this.Dispatcher = BdApi.findModule(m => m.dispatch && m._interceptor);
-			this.UserStore = BdApi.findModuleByProps("getUser", "getUsers");
+			this.MessageStore = Webpack.getModule(Filters.byProps("receiveMessage", "editMessage"));
+			this.CurrentUserStore = Webpack.getModule(Filters.byProps("getCurrentUser"));
 
 			//Settings
-			this.SwitchItem = BdApi.findModule(m => m.toString().includes("t=e.value,r=e.disabled"));
+			const filter = BdApi.Webpack.Filters.byStrings(`["tag","children","className","faded","disabled","required","error"]`),
+				target = BdApi.Webpack.getModule(m => Object.values(m).some(filter));
+			this.FormTitle = target[Object.keys(target).find(k => filter(target[k]))];
+			this.RadioItem = Webpack.getModule(m => m?.Sizes?.NONE, { searchExports: true });
+			this.SwitchItem = Webpack.getModule(Filters.byStrings("t=e.value,r=e.disabled"));
+
 
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
@@ -73,6 +76,7 @@ module.exports = class DoubleClickToEdit {
 			//Load settings
 			this.doubleClickToReplySetting = BdApi.loadData(config.info.id, "doubleClickToReplySetting") ?? false;
 			this.copyBeforeAction = BdApi.loadData(config.info.id, "copyBeforeAction") ?? false;
+			this.copyBeforeActionModifier = BdApi.loadData(config.info.id, "copyBeforeActionModifier") ?? "shift";
 		}
 		catch (err) {
 			try {
@@ -97,7 +101,8 @@ module.exports = class DoubleClickToEdit {
 		//Pretty neat.
 		return () => {
 			const [replyState, setReplyState] = React.useState(this.doubleClickToReplySetting),
-				[copyState, setCopyState] = React.useState(this.copyBeforeAction);
+				[copyState, setCopyState] = React.useState(this.copyBeforeAction),
+				[copyModifierState, setCopyModifierState] = React.useState(this.copyBeforeActionModifier);
 
 			return [
 				React.createElement(this.SwitchItem, {
@@ -125,7 +130,25 @@ module.exports = class DoubleClickToEdit {
 						setCopyState(newState);
 					}
 					//Discord Is One Of Those
-				}, "Enable Copying")
+				}, "Enable Copying"),
+				React.createElement(this.FormTitle, {
+					tag: "h3",
+					disabled: !copyState
+				}, "Modifier to hold before copying text"),
+				React.createElement(this.RadioItem, {
+					disabled: !copyState,
+					value: copyModifierState,
+					options: [
+						{ name: "Shift", value: "shift" },
+						{ name: "Ctrl", value: "ctrl" },
+						{ name: "Alt", value: "alt" }
+					],
+					onChange: (newState) => {
+						this.copyBeforeActionModifier = newState.value;
+						BdApi.saveData(config.info.id, "copyBeforeActionModifier", newState.value);
+						setCopyModifierState(newState.value);
+					}
+				}, "Copy Modifier")
 			];
 		}
 	}
@@ -154,7 +177,17 @@ module.exports = class DoubleClickToEdit {
 
 		//When selecting text it might be handy to have it auto-copy.
 		if (this.copyBeforeAction)
-			this.copyToClipboard(document.getSelection().toString());
+			switch (this.copyBeforeActionModifier) {
+				case "shift": if (!e.shiftKey) break;
+					this.copyToClipboard(document.getSelection().toString());
+					break;
+				case "ctrl": if (!e.ctrlKey) break;
+					this.copyToClipboard(document.getSelection().toString());
+					break;
+				case "alt": if (!e.altKey) break;
+					this.copyToClipboard(document.getSelection().toString());
+					break;
+			}
 
 		//The message instance is filled top to bottom, as it is in view.
 		//As a result, "baseMessage" will be the actual message you want to address. And "message" will be the reply.
