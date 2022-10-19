@@ -1,7 +1,7 @@
 /**
- * @name FixUpload
+ * @name Fix Upload
  * @author Farcrada
- * @version 1.0.0
+ * @version 1.0.1
  * @description Fix upload-button back to a single click operation.
  * 
  * @website https://github.com/Farcrada/DiscordPlugins
@@ -10,71 +10,53 @@
  */
 
 
-const config = {
-    info: {
-        name: "Fix Upload",
-        id: "FixUpload",
-        description: "Fix upload-button back to a single click operation.",
-        version: "1.0.0",
-        author: "Farcrada",
-        updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Fix-Upload/FixUpload.plugin.js"
-    }
-}
+const { Webpack, Webpack: { Filters }, Patcher } = BdApi,
+
+	config = {
+		info: {
+			name: "Fix Upload",
+			id: "FixUpload",
+			description: "Fix upload-button back to a single click operation.",
+			version: "1.0.1",
+			author: "Farcrada",
+			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Fix-Upload/FixUpload.plugin.js"
+		}
+	};
 
 
-class FixUpload {
-    getName() { return config.info.name; }
-    getDescription() { return config.info.description; }
-    getVersion() { return config.info.version; }
-    getAuthor() { return config.info.author; }
+module.exports = class FixUpload {
 
-    start() {
-        if (!global.ZeresPluginLibrary) {
-            BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
-                confirmText: "Download Now",
-                cancelText: "Cancel",
-                onConfirm: () => {
-                    require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
-                        async (error, response, body) => {
-                            if (error)
-                                return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
-                            await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
-                        });
-                }
-            });
-        }
 
-        //First try the updater
-        try {
-            global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-        }
-        catch (err) {
-            console.error(this.getName(), "Plugin Updater could not be reached.", err);
-        }
+	start() {
+		//First try the updater
+		try {
+			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
+		}
+		catch (err) {
+			console.error(config.info.name, "Plugin Updater could not be reached.", err);
+		}
 
-        //Now try to initialize.
-        try {
-            this.initialize();
-        }
-        catch (err) {
-            try {
-                console.error("Attempting to stop after initialization error...", err)
-                this.stop();
-            }
-            catch (err) {
-                console.error(this.getName() + ".stop()", err);
-            }
-        }
-    }
+		//Now try to initialize.
+		try {
+			const desiredFilter = m => m?.BorderColors && m?.Link,
+				theModule = Webpack.getModule(m => Object.values(m).some(desiredFilter), { searchExports: false }),
+				matchedKey = Object.keys(theModule).find(k => desiredFilter(theModule[k]));
 
-    initialize() {
-        BdApi.Patcher.after(config.info.id, BdApi.findModule(m => m?.default?.displayName === "ChannelAttachMenu"), "default", (that, methodArguments, returnValue) => {
-            //Close the popup (since it got clicked)
-            methodArguments[0].onClose();
-            //And make sure we go straight into upload.
-            methodArguments[0].onFileUpload();
-        });
-    }
+			Patcher.before(config.info.id, theModule, matchedKey, (thisObject, methodArguments, returnValue) => {
+				if (methodArguments[0]?.onClick && methodArguments[0]?.onDoubleClick)
+					methodArguments[0].onClick = methodArguments[0].onDoubleClick;
+			});
+		}
+		catch (err) {
+			try {
+				console.error("Attempting to stop after initialization error...", err)
+				this.stop();
+			}
+			catch (err) {
+				console.error(config.info.name + ".stop()", err);
+			}
+		}
+	}
 
-    stop() { BdApi.Patcher.unpatchAll(config.info.id); }
+	stop() { Patcher.unpatchAll(config.info.id); }
 }
