@@ -125,7 +125,10 @@ module.exports = class HideChannels {
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp); //BdApi.findModuleByDisplayName("KeybindRecorder");
-			this.FormItem = Webpack.getModule(Filters.byProps("Tags", "Sizes"));
+		}
+
+		if (!this.FormItem) {
+			this.FormItem = Object.assign(Webpack.getModule(Filters.byProps("Tags")), Webpack.getModule(Filters.byProps("Sizes")));
 		}
 
 		//Return our keybind settings wrapped in a form item
