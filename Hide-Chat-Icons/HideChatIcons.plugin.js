@@ -53,15 +53,11 @@ module.exports = class HideChatIcons {
 			this.SwitchItem = Webpack.getModule(Filters.byStrings("t=e.value,r=e.disabled"));
 
 			//Class variables
-			this.iconsHiddenBool = Data.load(config.info.id, "hidden");
+			this.iconsHiddenBool = Data.load(config.info.id, "hidden") ?? false;
 			this.hoverBool = Data.load(config.info.id, "hover");
-
-			//Main controls used to construct the settings panel
-			this.MenuControls = BdApi.findModuleByProps("RadioItem", "Item");
 
 			//Classes
 			this.buttonClasses = BdApi.findModuleByProps("buttons", "inner");
-
 			//Class to rerender the channel area
 			this.channelTextArea = BdApi.findModuleByProps("channelTextArea").channelTextArea;
 
@@ -264,7 +260,7 @@ module.exports = class HideChatIcons {
 			}
 
 			//Hard save the change
-			BdApi.saveData(config.info.id, "hidden", this.iconsHiddenBool);
+			Data.save(config.info.id, "hidden", this.iconsHiddenBool);
 		}
 
 		function hide() {
