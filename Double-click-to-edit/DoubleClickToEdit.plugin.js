@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.1
+ * @version 9.4.2
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -13,28 +13,27 @@
 /** @type {typeof import("react")} */
 const React = BdApi.React,
 
-	Webpack = BdApi.Webpack,
-	Filters = BdApi.Webpack.Filters,
+	{ Webpack, Webpack: { Filters } } = BdApi,
 
 	config = {
 		info: {
 			name: "Double Click To Edit",
 			id: "DoubleClickToEdit",
 			description: "Double click a message you wrote to quickly edit it",
-			version: "9.4.1",
+			version: "9.4.2",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 		}
-	};
+	},
 
-const blacklist = [
-	//Object
-	"video",
-	"emoji",
-	//Classes
-	"content",
-	"reactionInner"
-];
+	blacklist = [
+		//Object
+		"video",
+		"emoji",
+		//Classes
+		"content",
+		"reactionInner"
+	];
 
 
 module.exports = class DoubleClickToEdit {
@@ -55,7 +54,7 @@ module.exports = class DoubleClickToEdit {
 			this.copyToClipboard = Webpack.getModule(Filters.byProps("clipboard", "app")).clipboard.copy;
 
 			//Reply functions
-			this.replyToMessage = Webpack.getModule(Filters.byStrings("dispatchToLastSubscribed(", "isPrivate()"), { searchExports: true });
+			this.replyToMessage = Webpack.getModule(m => m?.toString?.()?.search(/(channel:[\w|\w],message:[\w|\w],shouldMention:!)/) > -1, { searchExports: true })
 			this.getChannel = Webpack.getModule(Filters.byProps("getChannel", "getDMFromUserId")).getChannel;
 
 			//Stores
@@ -63,8 +62,8 @@ module.exports = class DoubleClickToEdit {
 			this.CurrentUserStore = Webpack.getModule(Filters.byProps("getCurrentUser"));
 
 			//Settings
-			const filter = BdApi.Webpack.Filters.byStrings(`["tag","children","className","faded","disabled","required","error"]`),
-				target = BdApi.Webpack.getModule(m => Object.values(m).some(filter));
+			const filter = Webpack.Filters.byStrings(`["tag","children","className","faded","disabled","required","error"]`),
+				target = Webpack.getModule(m => Object.values(m).some(filter));
 			this.FormTitle = target[Object.keys(target).find(k => filter(target[k]))];
 			this.RadioItem = Webpack.getModule(m => m?.Sizes?.NONE, { searchExports: true });
 			this.SwitchItem = Webpack.getModule(Filters.byStrings("t=e.value,r=e.disabled"));
