@@ -43,8 +43,12 @@ module.exports = class FixUpload {
 				matchedKey = Object.keys(theModule).find(k => desiredFilter(theModule[k]));
 
 			Patcher.before(config.info.id, theModule, matchedKey, (thisObject, methodArguments, returnValue) => {
-				if (methodArguments[0]?.onClick && methodArguments[0]?.onDoubleClick)
+				if (methodArguments[0]?.onClick && methodArguments[0]?.onDoubleClick) {
+					//Transfer the double click action to the single click action.
 					methodArguments[0].onClick = methodArguments[0].onDoubleClick;
+					//Null this to prevent triple opening the upload window.
+					methodArguments[0].onDoubleClick = () => {};
+				}
 			});
 		}
 		catch (err) {
