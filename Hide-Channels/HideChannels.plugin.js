@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.5
+ * @version 2.2.6
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -11,20 +11,16 @@
  */
 
 /** @type {typeof import("react")} */
-const React = BdApi.React,
+const React = BdApi.React;
 
-	/** @type {typeof import("react-dom")} */
-	ReactDOM = BdApi.ReactDOM,
-
-	Webpack = BdApi.Webpack,
-	Filters = BdApi.Webpack.Filters,
+const { Webpack, Webpack: { Filters } } = BdApi,
 
 	config = {
 		info: {
 			name: "Hide Channels",
 			id: "HideChannels",
 			description: "Hide channel list from view.",
-			version: "2.2.5",
+			version: "2.2.6",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 		},
@@ -125,7 +121,7 @@ module.exports = class HideChannels {
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp); //BdApi.findModuleByDisplayName("KeybindRecorder");
-			this.FormItem = Webpack.getModule(Filters.byProps("Tags", "Sizes"));
+			this.FormItem = Webpack.getModule(Filters.byStrings(`["tag","children","className","faded","disabled","required","error"]`));
 		}
 
 		//Return our keybind settings wrapped in a form item
@@ -257,7 +253,8 @@ module.exports = class HideChannels {
 		useListener("keydown", e => {
 			//Since we made this an object,
 			//we can make new properties with `[]`
-			this.currentlyPressed[e.key.toLowerCase()] = true;
+			if (e?.key?.toLowerCase)
+				this.currentlyPressed[e.key.toLowerCase()] = true;
 
 			//Account for bubbling
 		}, true);
