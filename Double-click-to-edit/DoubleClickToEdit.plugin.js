@@ -74,7 +74,8 @@ module.exports = class DoubleClickToEdit {
 
 			//Load settings
 			this.doubleClickToReplySetting = BdApi.loadData(config.info.id, "doubleClickToReplySetting") ?? false;
-			this.editActionKey = 
+			this.replyActionKey = BdApi.loadData(config.info.id, "replyActionKey") ?? "any";
+			this.editActionKey = BdApi.loadData(config.info.id, "editActionKey") ?? "any";
 			this.copyBeforeAction = BdApi.loadData(config.info.id, "copyBeforeAction") ?? false;
 			this.copyBeforeActionModifier = BdApi.loadData(config.info.id, "copyBeforeActionModifier") ?? "shift";
 		}
@@ -106,6 +107,7 @@ module.exports = class DoubleClickToEdit {
 				[copyState, setCopyState] = React.useState(this.copyBeforeAction),
 				[copyModifierState, setCopyModifierState] = React.useState(this.copyBeforeActionModifier);
 
+			//You may want to edit how the settings are displayed, to whatever your liking is.
 			return [
 				React.createElement(this.SwitchItem, {
 					//The state that is loaded with the default value
