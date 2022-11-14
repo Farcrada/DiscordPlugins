@@ -74,6 +74,7 @@ module.exports = class DoubleClickToEdit {
 
 			//Load settings
 			this.doubleClickToReplySetting = BdApi.loadData(config.info.id, "doubleClickToReplySetting") ?? false;
+			this.editActionKey = 
 			this.copyBeforeAction = BdApi.loadData(config.info.id, "copyBeforeAction") ?? false;
 			this.copyBeforeActionModifier = BdApi.loadData(config.info.id, "copyBeforeActionModifier") ?? "shift";
 		}
@@ -100,6 +101,8 @@ module.exports = class DoubleClickToEdit {
 		//Pretty neat.
 		return () => {
 			const [replyState, setReplyState] = React.useState(this.doubleClickToReplySetting),
+				[replyActionKeyState, setReplyActionKeyState] = React.useState(this.replyActionKey),
+				[editActionKeyState, setEditActionKeyState] = React.useState(this.editActionKey),
 				[copyState, setCopyState] = React.useState(this.copyBeforeAction),
 				[copyModifierState, setCopyModifierState] = React.useState(this.copyBeforeActionModifier);
 
@@ -117,6 +120,48 @@ module.exports = class DoubleClickToEdit {
 					}
 					//Discord Is One Of Those
 				}, "Enable Replying"),
+
+				React.createElement(this.FormTitle, {
+					tag: "h3",
+				}, "Key to hold when editing a message"),
+				//Allow the user to control when they edit a message
+				React.createElement(this.RadioItem, {
+					value: editActionKeyState,
+					options: [
+						{ name: "None", value: "none" },
+						{ name: "Shift", value: "shift" },
+						{ name: "Ctrl", value: "ctrl" },
+						{ name: "Any", value: "any" }
+					],
+					onChange: (newState) => {
+						this.editActionKey = newState.value;
+						BdApi.saveData(config.info.id, "editActionKey", newState.value);
+						setEditActionKeyState(newState.value);
+					}
+					//Discord Is One Of Those (i have no clue what that means, but pop off ig)
+				}, "Edit ActionKey"),
+
+				React.createElement(this.FormTitle, {
+					tag: "h3",
+					disabled: !replyState
+				}, "Key to hold when replying to a message"),
+				//Allow the user to control when they reply to a message
+				React.createElement(this.RadioItem, {
+					disabled: !replyState,
+					value: replyActionKeyState,
+					options: [
+						{ name: "None", value: "none" },
+						{ name: "Shift", value: "shift" },
+						{ name: "Ctrl", value: "ctrl" },
+						{ name: "Any", value: "any" }
+					],
+					onChange: (newState) => {
+						this.replyActionKey = newState.value;
+						BdApi.saveData(config.info.id, "replyActionKey", newState.value);
+						setReplyActionKeyState(newState.value);
+					}
+				}, "Reply ActionKey"),
+
 				React.createElement(this.SwitchItem, {
 					//The state that is loaded with the default value
 					value: copyState,
@@ -130,6 +175,7 @@ module.exports = class DoubleClickToEdit {
 					}
 					//Discord Is One Of Those
 				}, "Enable Copying"),
+
 				React.createElement(this.FormTitle, {
 					tag: "h3",
 					disabled: !copyState
@@ -196,10 +242,31 @@ module.exports = class DoubleClickToEdit {
 		if (!message)
 			return;
 
-		if (message.author.id === this.CurrentUserStore.getCurrentUser().id)
-			this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
-		else if (this.doubleClickToReplySetting)
+		//Check if we're holding down the reply action key
+		let replyKeyHeld = false;
+		switch (this.replyActionKey) {
+			case "shift": replyKeyHeld = e.shiftKey; break;
+			case "ctrl": replyKeyHeld = e.ctrlKey; break;
+			case "alt": replyKeyHeld = e.altKey; break;
+			case "none": replyKeyHeld = !e.altKey && !e.ctrlKey && !e.shiftKey; break;
+			case "any": replyKeyHeld = true; break;
+		}
+
+		//Now we do the same thing with the edit action key
+		let editKeyHeld = false;
+		switch (this.editActionKey) {
+			case "shift": editKeyHeld = e.shiftKey; break;
+			case "ctrl": editKeyHeld = e.ctrlKey; break;
+			case "alt": editKeyHeld = e.altKey; break;
+			case "none": editKeyHeld = !e.altKey && !e.ctrlKey && !e.shiftKey; break;
+			case "any": editKeyHeld = true; break;
+		}
+
+		//If the edit reply key is any, and the reply key is held, we want the reply to be preferred. Otherwise, we want the edit to be preferred.
+		if (replyKeyHeld && (!editKeyHeld || this.editActionKey === "any" && this.replyActionKey !== "any" || message.author.id !== this.CurrentUserStore.getCurrentUser().id))
 			this.replyToMessage(this.getChannel(message.channel_id), message, e);
+		else if (editKeyHeld && message.author.id === this.CurrentUserStore.getCurrentUser().id)
+			this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
 	}
 
 	getValueFromKey(instance, searchkey) {
