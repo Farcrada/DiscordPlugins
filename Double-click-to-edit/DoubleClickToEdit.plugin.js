@@ -129,6 +129,7 @@ module.exports = class DoubleClickToEdit {
 				[copy, setCopy] = React.useState(this.copyEnabled),
 				[copyModifier, setCopyModifier] = React.useState(this.copyModifier);
 
+			//You may want to edit how the settings are displayed, to whatever your liking is.
 			return [
 
 				//Edit
