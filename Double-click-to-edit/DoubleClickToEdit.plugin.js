@@ -67,18 +67,6 @@ module.exports = class DoubleClickToEdit {
 			this.FormTitle = target[Object.keys(target).find(k => filter(target[k]))];
 			this.RadioItem = Webpack.getModule(m => m?.Sizes?.NONE, { searchExports: true });
 			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note"));
-
-			//Check for modifiers
-			this.checkForModifier = (enabled, modifier, event) => {
-				if (enabled)
-					switch (modifier) {
-						case "shift": return event.shiftKey;
-						case "ctrl": return event.ctrlKey;
-						case "alt": return event.altKey;
-					}
-				return false;
-			}
-
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
 
@@ -89,7 +77,6 @@ module.exports = class DoubleClickToEdit {
 			this.editModifier = Data.load(config.info.id, "editModifier") ?? "shift";
 			//Reply
 			this.replyEnabled = Data.load(config.info.id, "replyEnabled") ?? false;
-			console.log(Data.load(config.info.id, "replyEnabled") ?? false);
 			this.replyModifierEnabled = Data.load(config.info.id, "replyModifierEnabled") ?? false;
 			this.replyModifier = Data.load(config.info.id, "replyModifier") ?? "shift";
 			//Copy
@@ -129,7 +116,6 @@ module.exports = class DoubleClickToEdit {
 				[copy, setCopy] = React.useState(this.copyEnabled),
 				[copyModifier, setCopyModifier] = React.useState(this.copyModifier);
 
-			//You may want to edit how the settings are displayed, to whatever your liking is.
 			return [
 
 				//Edit
@@ -173,9 +159,7 @@ module.exports = class DoubleClickToEdit {
 					note: "Double click another's message and start replying.",
 					onChange: (newState) => {
 						this.replyEnabled = newState;
-						console.log(newState);
 						Data.save(config.info.id, "replyEnabled", newState);
-						console.log(`from save data ${Data.load(config.info.id, "replyEnabled")}`);
 						setReply(newState);
 					}
 				}, "Enable Replying"),
@@ -240,6 +224,23 @@ module.exports = class DoubleClickToEdit {
 		}
 	}
 
+	/**
+	 * 
+	 * @param {boolean} enabled Is the modifier enabled
+	 * @param {string} modifier Modifier key to be checked for
+	 * @param {Event} event The event checked against
+	 * @returns {boolean} Whether the modifier is enabled and the modifier is pressed
+	 */
+	checkForModifier(enabled, modifier, event) {
+		if (enabled)
+			switch (modifier) {
+				case "shift": return event.shiftKey;
+				case "ctrl": return event.ctrlKey;
+				case "alt": return event.altKey;
+			}
+		return false;
+	}
+
 	handler(e) {
 		//Check if we're not double clicking
 		if (typeof (e?.target?.className) !== typeof ("") ||
@@ -270,18 +271,22 @@ module.exports = class DoubleClickToEdit {
 		if (!message)
 			return;
 
+		//Now that we know it has to be a message, we check to copy the text before anything else changes.
+		const copyKeyHeld = this.checkForModifier(this.copyEnabled, this.copyModifier, e);
+		if (this.copyEnabled && copyKeyHeld) {
+			this.copyToClipboard(document.getSelection().toString());
+			return;
+		}
+
 		//Now we do the same thing with the edit and reply modifier
 		const editKeyHeld = this.checkForModifier(this.editModifierEnabled, this.editModifier, e),
-			replyKeyHeld = this.checkForModifier(this.replyEnabled, this.replyModifier, e),
-			copyKeyHeld = this.checkForModifier(this.copyEnabled, this.copyModifier, e);
+			replyKeyHeld = this.checkForModifier(this.replyEnabled, this.replyModifier, e);
 
 		//If a modifier is enabled, check if the key is held, otherwise ignore.
 		if ((this.editModifierEnabled ? editKeyHeld : true) && message.author.id === this.CurrentUserStore.getCurrentUser().id)
 			this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
 		else if ((this.replyModifierEnabled ? replyKeyHeld : true) && this.replyEnabled)
 			this.replyToMessage(this.getChannel(message.channel_id), message, e);
-		else if ((this.copyModifierEnabled ? copyKeyHeld : true) && this.copyEnabled)
-			this.copyToClipboard(document.getSelection().toString());
 	}
 
 	getValueFromKey(instance, searchkey) {
