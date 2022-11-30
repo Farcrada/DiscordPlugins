@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.6
+ * @version 2.2.8
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -13,14 +13,14 @@
 /** @type {typeof import("react")} */
 const React = BdApi.React;
 
-const { Webpack, Webpack: { Filters } } = BdApi,
+const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 
 	config = {
 		info: {
 			name: "Hide Channels",
 			id: "HideChannels",
 			description: "Hide channel list from view.",
-			version: "2.2.6",
+			version: "2.2.8",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 		},
@@ -56,51 +56,14 @@ module.exports = class HideChannels {
 			this.headerBarClass = Webpack.getModule(Filters.byProps("chat", "title")).title;
 
 			//And the keybind
-			this.keybindSetting = this.checkKeybindLoad(BdApi.loadData(config.info.id, "keybind"));
+			this.animation = this.checkKeybindLoad(Data.load(config.info.id, "animation")) ?? true;
+			this.keybindSetting = this.checkKeybindLoad(Data.load(config.info.id, "keybind"));
 			this.keybind = this.keybindSetting.split('+');
 
 			//Predefine for the eventlistener
 			this.currentlyPressed = {};
 
-			//Check if there is any CSS we have already, and remove it.
-			BdApi.clearCSS(config.constants.cssStyle);
-
-			//Now inject our (new) CSS
-			BdApi.injectCSS(config.constants.cssStyle, `
-/* Button CSS */
-#${config.constants.buttonID} {
-    min-width: 24px;
-    height: 24px;
-    background-position: center !important;
-    background-size: 100% !important;
-    opacity: 0.8;
-    cursor: pointer;
-}
-
-/* How the button looks */
-.theme-dark #${config.constants.buttonID}.${config.constants.buttonVisible} {
-    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
-}
-.theme-dark #${config.constants.buttonID}.${config.constants.buttonHidden} {
-    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
-}
-/* In light theme */
-.theme-light #${config.constants.buttonID}.${config.constants.buttonVisible} {
-    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
-}
-.theme-light #${config.constants.buttonID}.${config.constants.buttonHidden} {
-    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
-}
-
-/* Attached CSS to sidebar */
-.${config.constants.hideElementsName} {
-    width: 0 !important;
-}
-
-/* Set animations */
-.${this.sidebarClass} {
-    transition: width 400ms ease;
-}`);
+			this.generateCSS();
 
 			//Render the button and we're off to the races!
 			this.patchTitleBar();
@@ -120,38 +83,57 @@ module.exports = class HideChannels {
 		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
-			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp); //BdApi.findModuleByDisplayName("KeybindRecorder");
+			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp);
 			this.FormItem = Webpack.getModule(Filters.byStrings(`["tag","children","className","faded","disabled","required","error"]`));
+			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note"));
 		}
 
 		//Return our keybind settings wrapped in a form item
-		return React.createElement(this.FormItem, {
-			tag: "h5"
-		}, "Toggle by keybind:",
-			//Containing a keybind recorder.
-			React.createElement(this.KeybindRecorder, {
-				//The `keyup` and `keydown` events register the Ctrl key different
-				//We need to accomodate for that
-				defaultValue: this.KeybindToCombo(this.keybindSetting.replace("control", "ctrl")),
-				onChange: (e) => {
-					//Convert the keybind to current locale
-					//Once again accomodate for event differences
-					const keybindString = this.KeybindToString(e).toLowerCase().replace("ctrl", "control");
+		return () => {
+			const [animation, setanimation] = React.useState(this.animation);
 
-					//Set the keybind and save it.
-					BdApi.saveData(config.info.id, "keybind", keybindString);
-					//And the keybindSetting
-					this.keybindSetting = keybindString;
-					this.keybind = keybindString.split('+');
-				}
-			}));
+			return [
+				React.createElement(this.SwitchItem, {
+					value: animation,
+					note: "Enable the hide animation. Useful if the animation is \"unstatisfactory\".",
+					onChange: (newState) => {
+						//Save new state
+						this.animation = newState;
+						Data.save(config.info.id, "animation", newState);
+						setanimation(newState);
+
+						//Update CSS to reflect new settings.
+						this.generateCSS()
+					}
+				}, "Enable Hide Animation"),
+				React.createElement(this.FormItem, {
+					tag: "h5"
+				}, "Toggle by keybind:",
+					//Containing a keybind recorder.
+					React.createElement(this.KeybindRecorder, {
+						//The `keyup` and `keydown` events register the Ctrl key different
+						//We need to accomodate for that
+						defaultValue: this.KeybindToCombo(this.keybindSetting.replace("control", "ctrl")),
+						onChange: (e) => {
+							//Convert the keybind to current locale
+							//Once again accomodate for event differences
+							const keybindString = this.KeybindToString(e).toLowerCase().replace("ctrl", "control");
+
+							//Set the keybind and save it.
+							Data.save(config.info.id, "keybind", keybindString);
+							//And the keybindSetting
+							this.keybindSetting = keybindString;
+							this.keybind = keybindString.split('+');
+						}
+					}))];
+		}
 	}
 
 	stop() {
-		BdApi.Patcher.unpatchAll(config.info.id);
+		Patcher.unpatchAll(config.info.id);
 
 		//Our CSS
-		BdApi.clearCSS(config.constants.cssStyle);
+		DOM.removeStyle(config.constants.cssStyle);
 
 		//And if there are remnants of css left,
 		//make sure we remove the class from the sidebar to ensure visual confirmation.
@@ -162,24 +144,23 @@ module.exports = class HideChannels {
 
 	patchTitleBar() {
 		//The header bar above the "chat"; this is the same for the `Split View`.
-		//const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 		const filter = f => f?.Title && f?.Caret,
 			target = Webpack.getModule(m => Object.values(m).some(filter)),
 			HeaderBar = [target, Object.keys(target).find(k => filter(target[k]))];
 
-		BdApi.Patcher.before(config.info.id, ...HeaderBar, (thisObject, methodArguments, returnValue) => {
+		Patcher.before(config.info.id, ...HeaderBar, (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array.
-
 			if (Array.isArray(methodArguments[0]?.children))
-
 				if (methodArguments[0].children.some?.(child =>
 					//Make sure we're on the "original" headerbar and not that of a Voice channel's chat, or thread.
 					child?.props?.channel ||
 					//The friends page
 					child?.type?.Header ||
 					//The Nitro page
-					child?.props?.children === "Nitro"))
+					child?.props?.children === "Nitro" ||
+					//Home page of certain servers. This is gonna be broken next update, calling it.
+					child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
 
 					//Make sure our component isn't already present.
 					if (!methodArguments[0].children.some?.(child => child?.key === config.info.id))
@@ -320,5 +301,48 @@ module.exports = class HideChannels {
 					return this.KeybindToString(keybindToLoad).toLowerCase().replace("ctrl", "control");
 		}
 		catch (e) { return defaultKeybind; }
+	}
+
+	generateCSS() {
+		//Check if there is any CSS we have already, and remove it.
+		DOM.removeStyle(config.constants.cssStyle);
+
+		//Now inject our (new) CSS
+		DOM.addStyle(config.constants.cssStyle, `
+/* Button CSS */
+#${config.constants.buttonID} {
+    min-width: 24px;
+    height: 24px;
+    background-position: center !important;
+    background-size: 100% !important;
+    opacity: 0.8;
+    cursor: pointer;
+}
+
+/* How the button looks */
+.theme-dark #${config.constants.buttonID}.${config.constants.buttonVisible} {
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
+}
+.theme-dark #${config.constants.buttonID}.${config.constants.buttonHidden} {
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
+}
+/* In light theme */
+.theme-light #${config.constants.buttonID}.${config.constants.buttonVisible} {
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
+}
+.theme-light #${config.constants.buttonID}.${config.constants.buttonHidden} {
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
+}
+
+/* Attached CSS to sidebar */
+.${config.constants.hideElementsName} {
+    width: 0 !important;
+}
+
+/* Set animations */
+.${this.sidebarClass} {
+    ${this.animation ? "transition: width 400ms ease;" : ""}
+	overflow: hidden;
+}`);
 	}
 }
