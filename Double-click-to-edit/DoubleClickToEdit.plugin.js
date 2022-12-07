@@ -11,7 +11,6 @@
  */
 
 /** @type {typeof import("react")} */
-
 const React = BdApi.React,
 
 	{ Webpack, Webpack: { Filters }, Data } = BdApi,
@@ -38,6 +37,7 @@ const React = BdApi.React,
 
 
 module.exports = class DoubleClickToEdit {
+
 
 	load() {
 		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
@@ -67,21 +67,23 @@ module.exports = class DoubleClickToEdit {
 			this.FormTitle = target[Object.keys(target).find(k => filter(target[k]))];
 			this.RadioItem = Webpack.getModule(m => m?.Sizes?.NONE, { searchExports: true });
 			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note"));
+
+
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
 
 			//Load settings
-
 			//Edit
-			this.editModifierEnabled = Data.load(config.info.id, "editModifierEnabled") ?? false;
+			this.doubleClickToEditModifier = Data.load(config.info.id, "doubleClickToEditModifier") ?? false;
 			this.editModifier = Data.load(config.info.id, "editModifier") ?? "shift";
 			//Reply
-			this.replyEnabled = Data.load(config.info.id, "replyEnabled") ?? false;
-			this.replyModifierEnabled = Data.load(config.info.id, "replyModifierEnabled") ?? false;
+			this.doubleClickToReply = Data.load(config.info.id, "doubleClickToReply") ?? false;
+			this.doubleClickToReplyModifier = Data.load(config.info.id, "doubleClickToReplyModifier") ?? false;
 			this.replyModifier = Data.load(config.info.id, "replyModifier") ?? "shift";
 			//Copy
-			this.copyEnabled = Data.load(config.info.id, "copyEnabled") ?? false;
+			this.doubleClickToCopy = Data.load(config.info.id, "doubleClickToCopy") ?? false;
 			this.copyModifier = Data.load(config.info.id, "copyModifier") ?? "shift";
+
 		}
 		catch (err) {
 			try {
@@ -106,18 +108,17 @@ module.exports = class DoubleClickToEdit {
 		//Pretty neat.
 		return () => {
 			//Edit
-			const [editEnableModifier, setEditEnableModifier] = React.useState(this.editModifierEnabled),
+			const [editEnableModifier, setEditEnableModifier] = React.useState(this.doubleClickToEditModifier),
 				[editModifier, setEditModifier] = React.useState(this.editModifier),
 				//Reply
-				[reply, setReply] = React.useState(this.replyEnabled),
-				[replyEnableModifier, setReplyEnableModifier] = React.useState(this.replyModifierEnabled),
+				[reply, setReply] = React.useState(this.doubleClickToReply),
+				[replyEnableModifier, setReplyEnableModifier] = React.useState(this.doubleClickToReplyModifier),
 				[replyModifier, setReplyModifier] = React.useState(this.replyModifier),
 				//Copy
-				[copy, setCopy] = React.useState(this.copyEnabled),
+				[copy, setCopy] = React.useState(this.doubleClickToCopy),
 				[copyModifier, setCopyModifier] = React.useState(this.copyModifier);
 
 			return [
-
 				//Edit
 				React.createElement(this.SwitchItem, {
 					//The state that is loaded with the default value
@@ -126,10 +127,8 @@ module.exports = class DoubleClickToEdit {
 					//Since onChange passes the current state we can simply invoke it as such
 					onChange: (newState) => {
 						//Saving the new state
-						this.editModifierEnabled = newState;
-						Data.save(config.info.id,
-							"editModifierEnabled",
-							newState);
+						this.doubleClickToEditModifier = newState;
+						Data.save(config.info.id, "doubleClickToEditModifier", newState);
 						setEditEnableModifier(newState);
 					}
 					//Discord Is One Of Those
@@ -158,8 +157,8 @@ module.exports = class DoubleClickToEdit {
 					value: reply,
 					note: "Double click another's message and start replying.",
 					onChange: (newState) => {
-						this.replyEnabled = newState;
-						Data.save(config.info.id, "replyEnabled", newState);
+						this.doubleClickToReply = newState;
+						Data.save(config.info.id, "doubleClickToReply", newState);
 						setReply(newState);
 					}
 				}, "Enable Replying"),
@@ -168,8 +167,8 @@ module.exports = class DoubleClickToEdit {
 					value: replyEnableModifier,
 					note: "Enable modifier for double clicking to reply",
 					onChange: (newState) => {
-						this.replyModifierEnabled = newState;
-						Data.save(config.info.id, "replyModifierEnabled", newState);
+						this.doubleClickToReplyModifier = newState;
+						Data.save(config.info.id, "doubleClickToReplyModifier", newState);
 						setReplyEnableModifier(newState);
 					}
 				}, "Enable Reply Modifier"),
@@ -197,8 +196,8 @@ module.exports = class DoubleClickToEdit {
 					value: copy,
 					note: "Copy selection before entering edit-mode.",
 					onChange: (newState) => {
-						this.copyEnabled = newState;
-						Data.save(config.info.id, "copyEnabled", newState);
+						this.doubleClickToCopy = newState;
+						Data.save(config.info.id, "doubleClickToCopy", newState);
 						setCopy(newState);
 					}
 				}, "Enable Copying"),
@@ -219,26 +218,9 @@ module.exports = class DoubleClickToEdit {
 						Data.save(config.info.id, "copyModifier", newState.value);
 						setCopyModifier(newState.value);
 					}
-				}),
+				})
 			];
 		}
-	}
-
-	/**
-	 * 
-	 * @param {boolean} enabled Is the modifier enabled
-	 * @param {string} modifier Modifier key to be checked for
-	 * @param {Event} event The event checked against
-	 * @returns {boolean} Whether the modifier is enabled and the modifier is pressed
-	 */
-	checkForModifier(enabled, modifier, event) {
-		if (enabled)
-			switch (modifier) {
-				case "shift": return event.shiftKey;
-				case "ctrl": return event.ctrlKey;
-				case "alt": return event.altKey;
-			}
-		return false;
 	}
 
 	handler(e) {
@@ -263,6 +245,11 @@ module.exports = class DoubleClickToEdit {
 		if (!instance)
 			return;
 
+		//When selecting text it might be useful to copy.
+		const copyKeyHeld = this.checkForModifier(this.doubleClickToCopy, this.copyModifier, e);
+		if (copyKeyHeld)
+			this.copyToClipboard(document.getSelection().toString());
+
 		//The message instance is filled top to bottom, as it is in view.
 		//As a result, "baseMessage" will be the actual message you want to address. And "message" will be the reply.
 		//Maybe the message has a reply, so check if "baseMessage" exists and otherwise fallback on "message".
@@ -271,22 +258,32 @@ module.exports = class DoubleClickToEdit {
 		if (!message)
 			return;
 
-		//Now that we know it has to be a message, we check to copy the text before anything else changes.
-		const copyKeyHeld = this.checkForModifier(this.copyEnabled, this.copyModifier, e);
-		if (this.copyEnabled && copyKeyHeld) {
-			this.copyToClipboard(document.getSelection().toString());
-			return;
-		}
-
 		//Now we do the same thing with the edit and reply modifier
-		const editKeyHeld = this.checkForModifier(this.editModifierEnabled, this.editModifier, e),
-			replyKeyHeld = this.checkForModifier(this.replyEnabled, this.replyModifier, e);
+		const editKeyHeld = this.checkForModifier(this.doubleClickToEditModifier, this.editModifier, e),
+			replyKeyHeld = this.checkForModifier(this.doubleClickToReplyModifier, this.replyModifier, e);
 
 		//If a modifier is enabled, check if the key is held, otherwise ignore.
-		if ((this.editModifierEnabled ? editKeyHeld : true) && message.author.id === this.CurrentUserStore.getCurrentUser().id)
+		if ((this.doubleClickToEditModifier ? editKeyHeld : true) && message.author.id === this.CurrentUserStore.getCurrentUser().id)
 			this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
-		else if ((this.replyModifierEnabled ? replyKeyHeld : true) && this.replyEnabled)
+		else if ((this.doubleClickToReplyModifier ? replyKeyHeld : true) && this.doubleClickToReply)
 			this.replyToMessage(this.getChannel(message.channel_id), message, e);
+	}
+
+	/**
+	 * 
+	 * @param {boolean} enabled Is the modifier enabled
+	 * @param {string} modifier Modifier key to be checked for
+	 * @param {Event} event The event checked against
+	 * @returns {boolean} Whether the modifier is enabled and the modifier is pressed
+	 */
+	checkForModifier(enabled, modifier, event) {
+		if (enabled)
+			switch (modifier) {
+				case "shift": return event.shiftKey;
+				case "ctrl": return event.ctrlKey;
+				case "alt": return event.altKey;
+			}
+		return false;
 	}
 
 	getValueFromKey(instance, searchkey) {
