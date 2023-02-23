@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.4
+ * @version 9.4.5
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -20,7 +20,7 @@ const React = BdApi.React,
 			name: "Double Click To Edit",
 			id: "DoubleClickToEdit",
 			description: "Double click a message you wrote to quickly edit it",
-			version: "9.4.4",
+			version: "9.4.5",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 		}
@@ -66,7 +66,7 @@ module.exports = class DoubleClickToEdit {
 				target = Webpack.getModule(m => Object.values(m).some(filter));
 			this.FormTitle = target[Object.keys(target).find(k => filter(target[k]))];
 			this.RadioItem = Webpack.getModule(m => m?.Sizes?.NONE, { searchExports: true });
-			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note"));
+			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note", "checked:"), { searchExports: true });
 
 
 			//Events
