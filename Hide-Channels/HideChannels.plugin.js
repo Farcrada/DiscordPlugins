@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.8
+ * @version 2.2.9
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -20,7 +20,7 @@ const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 			name: "Hide Channels",
 			id: "HideChannels",
 			description: "Hide channel list from view.",
-			version: "2.2.8",
+			version: "2.2.9",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 		},
@@ -66,7 +66,12 @@ module.exports = class HideChannels {
 			this.generateCSS();
 
 			//Render the button and we're off to the races!
-			this.patchTitleBar();
+			const filter = f => f?.Icon && f.Title,
+				modules = Webpack.getModule(m => Object.values(m).some(filter), { first: false });
+			for (const module of modules) {
+				const HeaderBar = [module, Object.keys(module).find(k => filter(module[k]))];
+				this.patchTitleBar(HeaderBar);
+			}
 		}
 		catch (err) {
 			try {
@@ -84,8 +89,8 @@ module.exports = class HideChannels {
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp);
-			this.FormItem = Webpack.getModule(Filters.byStrings(`["tag","children","className","faded","disabled","required","error"]`));
-			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note"));
+			this.FormItem = Webpack.getModule(Filters.byStrings("e.LEGEND", "e.LABEL"), { searchExports: true });
+			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note", "checked:"), { searchExports: true });
 		}
 
 		//Return our keybind settings wrapped in a form item
@@ -142,13 +147,11 @@ module.exports = class HideChannels {
 			sidebar.classList.remove(config.constants.hideElementsName);
 	}
 
-	patchTitleBar() {
-		//The header bar above the "chat"; this is the same for the `Split View`.
-		const filter = f => f?.Title && f?.Caret,
-			target = Webpack.getModule(m => Object.values(m).some(filter)),
-			HeaderBar = [target, Object.keys(target).find(k => filter(target[k]))];
-
-		Patcher.before(config.info.id, ...HeaderBar, (thisObject, methodArguments, returnValue) => {
+	/**
+	 * @param {object[]} headerBar The module and the export's name (as a string) that contains it
+	 */
+	patchTitleBar(headerBar) {
+		Patcher.before(config.info.id, ...headerBar, (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array.
 			if (Array.isArray(methodArguments[0]?.children))
