@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.9
+ * @version 2.2.10
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -89,7 +89,7 @@ module.exports = class HideChannels {
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
 		if (!this.KeybindRecorder) {
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp);
-			this.FormItem = Webpack.getModule(Filters.byStrings("e.LEGEND", "e.LABEL"), { searchExports: true });
+			this.FormItem = Webpack.getModule(Filters.byRegex(/(case .\.LEGEND:)/), { searchExports: true });
 			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note", "checked:"), { searchExports: true });
 		}
 
