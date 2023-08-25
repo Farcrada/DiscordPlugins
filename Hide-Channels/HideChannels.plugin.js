@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.10
+ * @version 2.2.11
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -20,7 +20,7 @@ const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 			name: "Hide Channels",
 			id: "HideChannels",
 			description: "Hide channel list from view.",
-			version: "2.2.9",
+			version: "2.2.11",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
 		},
@@ -46,14 +46,14 @@ module.exports = class HideChannels {
 	start() {
 		try {
 			//React components for settings
-			this.WindowInfoStore = Webpack.getModule(Filters.byProps("isFocused", "isElementFullScreen"));
+			this.WindowInfoStore = Webpack.getModule(Filters.byKeys("isFocused", "isElementFullScreen"));
 
 			this.KeybindToCombo = Webpack.getModule(Filters.byStrings("numpad plus"), { searchExports: true });
 			this.KeybindToString = Webpack.getModule(Filters.byStrings(".join(\"+\")"), { searchExports: true });
 
 			//The sidebar to "minimize"/hide
-			this.sidebarClass = Webpack.getModule(Filters.byProps("container", "base")).sidebar;
-			this.headerBarClass = Webpack.getModule(Filters.byProps("chat", "title")).title;
+			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebar;
+			this.headerBarClass = Webpack.getModule(Filters.byKeys("chat", "title")).title;
 
 			//And the keybind
 			this.animation = this.checkKeybindLoad(Data.load(config.info.id, "animation")) ?? true;
