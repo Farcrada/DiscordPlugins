@@ -13,26 +13,31 @@
 /** @type {typeof import("react")} */
 const React = BdApi.React,
 
-	{ Webpack, Webpack: { Filters }, Data, ReactUtils } = BdApi,
+	{ Webpack, Webpack: { Filters }, Data, Utils, ReactUtils } = BdApi,
 
 	config = {
 		info: {
 			name: "Double Click To Edit",
 			id: "DoubleClickToEdit",
 			description: "Double click a message you wrote to quickly edit it",
-			version: "9.4.6",
+			version: "9.4.7",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
 		}
 	},
 
-	blacklist = [
+	ignore = [
 		//Object
 		"video",
 		"emoji",
 		//Classes
 		"content",
 		"reactionInner"
+	],
+	walkable = [
+		"child",
+		"memoizedProps",
+		"sibling"
 	];
 
 
@@ -47,19 +52,19 @@ module.exports = class DoubleClickToEdit {
 	start() {
 		try {
 			//Classes
-			this.selectedClass = Webpack.getModule(Filters.byProps("message", "selected")).selected;
-			this.messagesWrapper = Webpack.getModule(Filters.byProps("empty", "messagesWrapper")).messagesWrapper;
+			this.selectedClass = Webpack.getModule(Filters.byKeys("message", "selected")).selected;
+			this.messagesWrapper = Webpack.getModule(Filters.byKeys("empty", "messagesWrapper")).messagesWrapper;
 
 			//Copy to clipboard
-			this.copyToClipboard = Webpack.getModule(Filters.byProps("clipboard", "app")).clipboard.copy;
+			this.copyToClipboard = Webpack.getModule(Filters.byKeys("clipboard", "app")).clipboard.copy;
 
 			//Reply functions
 			this.replyToMessage = Webpack.getModule(m => m?.toString?.()?.replace('\n', '')?.search(/(channel:[\w|\w],message:[\w|\w],shouldMention:!)/) > -1, { searchExports: true })
-			this.getChannel = Webpack.getModule(Filters.byProps("getChannel", "getDMFromUserId")).getChannel;
+			this.getChannel = Webpack.getModule(Filters.byKeys("getChannel", "getDMFromUserId")).getChannel;
 
 			//Stores
-			this.MessageStore = Webpack.getModule(Filters.byProps("receiveMessage", "editMessage"));
-			this.CurrentUserStore = Webpack.getModule(Filters.byProps("getCurrentUser"));
+			this.MessageStore = Webpack.getModule(Filters.byKeys("receiveMessage", "editMessage"));
+			this.CurrentUserStore = Webpack.getModule(Filters.byKeys("getCurrentUser"));
 
 			//Settings
 			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
@@ -221,7 +226,7 @@ module.exports = class DoubleClickToEdit {
 	handler(e) {
 		//Check if we're not double clicking
 		if (typeof (e?.target?.className) !== typeof ("") ||
-			blacklist.some(nameOfClass => e?.target?.className?.indexOf?.(nameOfClass) > -1))
+			ignore.some(nameOfClass => e?.target?.className?.indexOf?.(nameOfClass) > -1))
 			return;
 
 		//Target the message
@@ -248,7 +253,8 @@ module.exports = class DoubleClickToEdit {
 		//The message instance is filled top to bottom, as it is in view.
 		//As a result, "baseMessage" will be the actual message you want to address. And "message" will be the reply.
 		//Maybe the message has a reply, so check if "baseMessage" exists and otherwise fallback on "message".
-		const message = this.getValueFromKey(instance, "baseMessage") ?? this.getValueFromKey(instance, "message");
+		const message = Utils.findInTree(instance, m => m?.baseMessage, { walkable: walkable })?.baseMessage ??
+			Utils.findInTree(instance, m => m?.message, { walkable: walkable })?.message;
 
 		if (!message)
 			return;
@@ -279,46 +285,5 @@ module.exports = class DoubleClickToEdit {
 				case "alt": return event.altKey;
 			}
 		return false;
-	}
-
-	getValueFromKey(instance, searchkey) {
-		//Where we want to search.
-		const whitelist = {
-			memoizedProps: true,
-			child: true,
-			sibling: true
-		};
-
-		return function getKey(instance) {
-			//Pre-define
-			let result = undefined;
-			//Make sure it exists and isn't a "paradox".
-			if (instance && !Node.prototype.isPrototypeOf(instance)) {
-				//Get our own keys
-				const keys = Object.getOwnPropertyNames(instance);
-				//As long as we don't have a result, lets go through.
-				for (let i = 0; result === undefined && i < keys.length; i++) {
-					//Store our key for readability
-					const key = keys[i];
-					//Check if there is a key
-					if (key) {
-						//Store the value
-						const value = instance[key];
-						//Is our key what we want?
-						if (searchkey === key)
-							result = value;
-						//Otherwise check if the value of a key is something we can search through
-						//and whitelisted; of course.
-						else if ((typeof value === "object" || typeof value === "function") &&
-							(whitelist[key] || key[0] == "." || !isNaN(key[0])))
-							//Lets go nesting; lets go!
-							result = getKey(value);
-					}
-				}
-			}
-			//If a poor sod got found this will not be `undefined`
-			return result;
-			//Start our mayhem
-		}(instance);
 	}
 }
