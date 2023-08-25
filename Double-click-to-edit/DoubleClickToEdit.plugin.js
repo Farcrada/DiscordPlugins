@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.6
+ * @version 9.4.7
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -13,7 +13,7 @@
 /** @type {typeof import("react")} */
 const React = BdApi.React,
 
-	{ Webpack, Webpack: { Filters }, Data } = BdApi,
+	{ Webpack, Webpack: { Filters }, Data, ReactUtils } = BdApi,
 
 	config = {
 		info: {
@@ -112,7 +112,7 @@ module.exports = class DoubleClickToEdit {
 				//Copy
 				[copy, setCopy] = React.useState(this.doubleClickToCopy),
 				[copyModifier, setCopyModifier] = React.useState(this.copyModifier);
-			
+
 			return [
 				//Edit
 				React.createElement(this.UIModule.FormSwitch, {
@@ -235,7 +235,7 @@ module.exports = class DoubleClickToEdit {
 			return;
 
 		//Basically make a HTMLElement/Node interactable with it's React components.
-		const instance = BdApi.getInternalInstance(messageDiv);
+		const instance = ReactUtils.getInternalInstance(messageDiv);
 		//Mandatory nullcheck
 		if (!instance)
 			return;
