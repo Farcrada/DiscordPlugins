@@ -1,7 +1,7 @@
 /**
  * @name Hide Chat Icons
  * @author Farcrada
- * @version 1.3.4
+ * @version 1.3.5
  * @description Hides the chat icons behind a button.
  * 
  * @invite qH6UWCwfTu
@@ -13,14 +13,14 @@
 /** @type {typeof import("react")} */
 const React = BdApi.React,
 
-	{ Webpack, Webpack: { Filters }, Data } = BdApi,
+	{ Webpack, Webpack: { Filters }, Data, DOM } = BdApi,
 
 	config = {
 		info: {
 			name: "Hide Chat Icons",
 			id: "HideChatIcons",
 			description: "Hides the chat icons behind a button.",
-			version: "1.3.4",
+			version: "1.3.5",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
 		},
@@ -60,14 +60,14 @@ module.exports = class HideChatIcons {
 			this.hoverBool = Data.load(config.info.id, "hover");
 
 			//Classes
-			this.buttonClasses = BdApi.findModuleByProps("buttons", "inner");
+			this.buttonClasses = Webpack.getModule(Filters.byKeys("buttons", "inner"));
 			//Class to rerender the channel area
-			this.channelTextArea = BdApi.findModuleByProps("channelTextArea").channelTextArea;
+			this.channelTextArea = Webpack.getModule(Filters.byKeys("channelTextArea")).channelTextArea;
 
 			//If any CSS; clear it.
-			BdApi.clearCSS(config.constants.cssStyle);
+			DOM.removeStyle(config.constants.cssStyle);
 			//And add it (again)
-			BdApi.injectCSS(config.constants.cssStyle, `
+			DOM.addStyle(config.constants.cssStyle, `
 /* Button CSS */
 #${config.constants.buttonID} {
 	min-width: 12px;
@@ -288,7 +288,7 @@ module.exports = class HideChatIcons {
 	//Gotta remove all our patches
 	stop() {
 		//Our CSS
-		BdApi.clearCSS(config.constants.cssStyle)
+		DOM.removeStyle(config.constants.cssStyle)
 
 		//Fetch and save nodes
 		let button = document.getElementById(config.constants.buttonID),
