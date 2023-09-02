@@ -1,69 +1,40 @@
 /**
- * @name RightClickJoin
+ * @name Right Click Join
  * @author Farcrada
- * @version 1.4.1
+ * @version 1.6.0
  * @description Right click a user to join a voice channel they are in.
  * 
+ * @invite qH6UWCwfTu
  * @website https://github.com/Farcrada/DiscordPlugins
  * @source https://github.com/Farcrada/DiscordPlugins/blob/master/Right-Click-Join/RightClickJoin.plugin.js
  * @updateUrl https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js
  */
 
-
-const config = {
-	info: {
-		name: "Right Click Join",
-		id: "RightClickJoin",
-		menuID: "right-click-join",
-		description: "Right click a user to join a voice channel they are in.",
-		version: "1.4.1",
-		author: "Farcrada",
-		updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Right-Click-Join/RightClickJoin.plugin.js"
-	}
-}
+const { Webpack, Webpack: { Filters }, Patcher, ContextMenu } = BdApi,
+	config = {};
 
 
-class RightClickJoin {
+module.exports = class RightClickJoin {
 
-	getName() { return config.info.name; }
 
+	constructor(meta) { config.info = meta; }
 
 	load() {
-		if (!global.ZeresPluginLibrary)
-			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${this.getName()} is missing. Please click Download Now to install it.`, {
-				confirmText: "Download Now",
-				cancelText: "Cancel",
-				onConfirm: () => {
-					require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js",
-						async (error, response, body) => {
-							if (error)
-								return require("electron").shell.openExternal("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
-							await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
-						});
-				}
-			});
-		else
-			try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
-			catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
+		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
+		catch (err) { console.error(config.info.name, "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
 	}
 
 	start() {
 		try {
 			//Specific functions we need, nothing like a big module
-			this.getVoiceStatesForChannel = BdApi.findModuleByProps("getAllVoiceStates", "getVoiceStatesForChannel").getVoiceStatesForChannel;
-			this.getChannels = BdApi.findModuleByProps("getChannels", "getDefaultChannel").getChannels;
-			this.selectVoiceChannel = BdApi.findModuleByProps("selectChannel").selectVoiceChannel;
-			this.fetchProfile = BdApi.findModuleByProps("fetchProfile").fetchProfile;
-			this.useStateFromStores = BdApi.findModuleByProps("useStateFromStores").useStateFromStores;
+			this.VoiceStateStore = Webpack.getStore("VoiceStateStore");
+			this.GuildChannelStore = Webpack.getStore("GuildChannelStore");
+			this.selectVoiceChannel = Webpack.getModule(Filters.byKeys("selectChannel")).selectVoiceChannel;
+			this.UserProfileStore = Webpack.getStore("UserProfileStore");
+			this.useStateFromStores = Webpack.getModule(Filters.byStrings("useStateFromStores"), { searchExports: true });
+			this.ContextMenuStore = Webpack.getStore("ContextMenuStore");
 
-			this.Dispatcher = BdApi.findModuleByProps("isDispatching");
-			this.MutualStore = BdApi.findModuleByProps("isFetching", "getUserProfile");
-
-			//Context controls (mainly just the one item we insert)
-			this.MenuStore = BdApi.findModuleByProps("MenuRadioItem", "MenuItem");
-
-			//Thanks Discord
-			this.patchCallUserItem();
+			this.patchUserContextMenu();
 		}
 		catch (err) {
 			try {
@@ -71,83 +42,57 @@ class RightClickJoin {
 				this.stop();
 			}
 			catch (err) {
-				console.error(this.getName() + ".stop()", err);
+				console.error(config.info.name + ".stop()", err);
 			}
 		}
 	}
 
-	stop() { BdApi.Patcher.unpatchAll(config.info.id); }
+	stop() { Patcher.unpatchAll(config.info.slug); config.userContextPatch; }
 
 
-	async patchCallUserItem() {
-		const CallUserItem = await global.ZeresPluginLibrary.ContextMenu.getDiscordMenu("useCallUserItem");
-
-		BdApi.Patcher.after(config.info.id, CallUserItem, "default", (thisObject, methodArguments, returnValue) => {
-			return [
-				this.rightClickJoinMagic(methodArguments[0]),
-				returnValue
-			];
+	patchUserContextMenu() {
+		config.userContextPatch = ContextMenu.patch("user-context", (returnValue, props) => {
+			const location = returnValue?.props?.children[0]?.props?.children[1]?.props?.children;
+			if (!location?.some?.(item => item && item?.props?.id === config.info.menuID))
+				location.splice(location.findIndex(item => item && item?.props?.id === "call"), 0, this.rightClickJoinMagic(props));
 		});
 	}
 
 
 	rightClickJoinMagic(props) {
-		//Now we gotta check mutual guilds to see if we match anything
-		const mutualGuilds = this.useStateFromStores([this.MutualStore], () => this.MutualStore.getMutualGuilds(props.id) ?? []),
-			checkAndAddItem = (_mutualGuilds = []) => {
-				//So we need a loop through if there's many
-				for (let i = 0; i < _mutualGuilds.length; i++) {
-					const matchedChannelId = this.checkVoiceForId(this.getChannels(_mutualGuilds[i].guild.id).VOCAL, props.id);
-					if (matchedChannelId)
-						//We need to have a way to break early if we find anything,
-						//to reduce resource consumption.
-						//You can only be connected to one voicechannel anyway
-						return BdApi.React.createElement(this.MenuStore.MenuItem, {
-							//Discord Is One Of Those
-							label: "Join Call",
-							id: config.info.menuID,
-							action: () => {
-								//Joining a voicechannel
-								this.selectVoiceChannel(matchedChannelId);
-							}
-						})
+		if (this.UserProfileStore.isFetchingProfile(props.user.id))
+			return null;
+		
+		const mutualGuilds = this.UserProfileStore.getMutualGuilds(props.user.id),
+			checkVoiceForId = (voiceChannels, userId) => {
+				//Gotta make sure this man is actually in a voice call
+				for (let i = 0; i < voiceChannels.length; i++) {
+					const channelId = voiceChannels[i].channel.id,
+						//Get all the participants in this voicechannel
+						participants = this.VoiceStateStore.getVoiceStatesForChannel(channelId);
+						
+					for (const id in participants)
+						//If a matching participant is found
+						if (participants[id].userId === userId)
+							return channelId;
 				}
+				return null;
 			};
 
-		if (mutualGuilds.length < 1) {
-			//Gotta make sure we're not fetching already (or risk spamming the API)
-			if (this.MutualStore.isFetching(props.id))
-				return null;
+		if (mutualGuilds?.length > 0)
+			for (let i = 0; i < mutualGuilds.length; i++) {
+				const matchedChannelId = checkVoiceForId(this.GuildChannelStore.getChannels(mutualGuilds[i].guild.id).VOCAL, props.user.id);
 
-			this.Dispatcher.wait(() => {
-				//Fetch and then we need to fill "mutualGuilds" again, so we just pass the call
-				this.fetchProfile(props.id)
-					.then(() => {
-						return checkAndAddItem(this.MutualStore.getMutualGuilds(props.id) ?? []);
-					})
-					.catch(error => {
-						if (~error?.message?.indexOf("Already dispatching")) return null;
+				if (matchedChannelId)
+					return ContextMenu.buildItem({
+						label: "Join Call",
+						id: config.info.menuID,
+						action: () => {
+							this.selectVoiceChannel(matchedChannelId);
+						}
 					});
-			});
-		}
-		else
-			return checkAndAddItem(mutualGuilds);
-	}
+			};
 
-	checkVoiceForId(voiceChannels, userId) {
-		//Gotta make sure this man is actually in a voice call
-		//Loopy whoop
-		for (let i = 0; i < voiceChannels.length; i++) {
-			//Get all the participants in this voicechannel
-			const channelId = voiceChannels[i].channel.id,
-				participants = this.getVoiceStatesForChannel(channelId);
-			//Loopy doop
-			for (const id in participants)
-				//If a matching participant is found, engage
-				if (participants[id].userId === userId)
-					return channelId;
-		}
-		//If nothing, return null.
 		return null;
 	}
 }
