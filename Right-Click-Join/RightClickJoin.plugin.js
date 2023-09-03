@@ -1,7 +1,7 @@
 /**
  * @name Right Click Join
  * @author Farcrada
- * @version 1.6.0
+ * @version 1.6.1
  * @description Right click a user to join a voice channel they are in.
  * 
  * @invite qH6UWCwfTu
@@ -26,13 +26,10 @@ module.exports = class RightClickJoin {
 
 	start() {
 		try {
-			//Specific functions we need, nothing like a big module
 			this.VoiceStateStore = Webpack.getStore("VoiceStateStore");
 			this.GuildChannelStore = Webpack.getStore("GuildChannelStore");
 			this.selectVoiceChannel = Webpack.getModule(Filters.byKeys("selectChannel")).selectVoiceChannel;
 			this.UserProfileStore = Webpack.getStore("UserProfileStore");
-			this.useStateFromStores = Webpack.getModule(Filters.byStrings("useStateFromStores"), { searchExports: true });
-			this.ContextMenuStore = Webpack.getStore("ContextMenuStore");
 
 			this.patchUserContextMenu();
 		}
@@ -47,30 +44,30 @@ module.exports = class RightClickJoin {
 		}
 	}
 
-	stop() { Patcher.unpatchAll(config.info.slug); config.userContextPatch; }
+	stop() { Patcher.unpatchAll(config.info.slug); }
 
 
 	patchUserContextMenu() {
-		config.userContextPatch = ContextMenu.patch("user-context", (returnValue, props) => {
-			const location = returnValue?.props?.children[0]?.props?.children[1]?.props?.children;
-			if (!location?.some?.(item => item && item?.props?.id === config.info.menuID))
-				location.splice(location.findIndex(item => item && item?.props?.id === "call"), 0, this.rightClickJoinMagic(props));
+		const { module, key } = this.getModuleAndKey(Filters.byStrings("MenuItem,{id:\"call\","), {searchExports: false});
+
+		Patcher.after(config.info.slug, module, key, (thisObject, methodArguments, returnValue) => {
+			return [
+				this.rightClickJoinMagic(methodArguments[0]),
+				returnValue
+			];
 		});
 	}
 
 
 	rightClickJoinMagic(props) {
-		if (this.UserProfileStore.isFetchingProfile(props.user.id))
-			return null;
-		
-		const mutualGuilds = this.UserProfileStore.getMutualGuilds(props.user.id),
+		const mutualGuilds = this.UserProfileStore.getMutualGuilds(props.id),
 			checkVoiceForId = (voiceChannels, userId) => {
 				//Gotta make sure this man is actually in a voice call
 				for (let i = 0; i < voiceChannels.length; i++) {
 					const channelId = voiceChannels[i].channel.id,
 						//Get all the participants in this voicechannel
 						participants = this.VoiceStateStore.getVoiceStatesForChannel(channelId);
-						
+
 					for (const id in participants)
 						//If a matching participant is found
 						if (participants[id].userId === userId)
@@ -81,7 +78,7 @@ module.exports = class RightClickJoin {
 
 		if (mutualGuilds?.length > 0)
 			for (let i = 0; i < mutualGuilds.length; i++) {
-				const matchedChannelId = checkVoiceForId(this.GuildChannelStore.getChannels(mutualGuilds[i].guild.id).VOCAL, props.user.id);
+				const matchedChannelId = checkVoiceForId(this.GuildChannelStore.getChannels(mutualGuilds[i].guild.id).VOCAL, props.id);
 
 				if (matchedChannelId)
 					return ContextMenu.buildItem({
@@ -95,4 +92,25 @@ module.exports = class RightClickJoin {
 
 		return null;
 	}
-}
+
+	/**
+	 * @param {function} filter Filter to search all the exports with
+	 * @param {object} options Options to use while searching.
+	 * @returns {object} Module with the key
+	 */
+	getModuleAndKey(filter, options) {
+		let module;
+		const target = Webpack.getModule((entry, m) => filter(entry) ? (module = m) : false, options);
+
+		module = module?.exports;
+
+		if (!module)
+			return undefined;
+
+		const key = Object.keys(module).find(k => module[k] === target);
+
+		if (!key)
+			return undefined;
+		return { module, key };
+	}
+};
