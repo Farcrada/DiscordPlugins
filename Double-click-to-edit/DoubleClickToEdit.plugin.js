@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.7
+ * @version 9.4.8
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -15,16 +15,7 @@ const React = BdApi.React,
 
 	{ Webpack, Webpack: { Filters }, Data, Utils, ReactUtils } = BdApi,
 
-	config = {
-		info: {
-			name: "Double Click To Edit",
-			id: "DoubleClickToEdit",
-			description: "Double click a message you wrote to quickly edit it",
-			version: "9.4.7",
-			author: "Farcrada",
-			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Double-click-to-edit/DoubleClickToEdit.plugin.js"
-		}
-	},
+	config = {},
 
 	ignore = [
 		//Object
@@ -44,10 +35,7 @@ const React = BdApi.React,
 module.exports = class DoubleClickToEdit {
 
 
-	load() {
-		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
-		catch (err) { console.error(config.info.name, "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
-	}
+	constructor(meta) { config.info = meta; }
 
 	start() {
 		try {
@@ -59,7 +47,7 @@ module.exports = class DoubleClickToEdit {
 			this.copyToClipboard = Webpack.getModule(Filters.byKeys("clipboard", "app")).clipboard.copy;
 
 			//Reply functions
-			this.replyToMessage = Webpack.getModule(m => m?.toString?.()?.replace('\n', '')?.search(/(channel:[\w|\w],message:[\w|\w],shouldMention:!)/) > -1, { searchExports: true })
+			this.replyToMessage = Webpack.getModule(Filters.byKeys("replyToMessage")).replyToMessage;
 			this.getChannel = Webpack.getModule(Filters.byKeys("getChannel", "getDMFromUserId")).getChannel;
 
 			//Stores
@@ -74,15 +62,15 @@ module.exports = class DoubleClickToEdit {
 
 			//Load settings
 			//Edit
-			this.doubleClickToEditModifier = Data.load(config.info.id, "doubleClickToEditModifier") ?? false;
-			this.editModifier = Data.load(config.info.id, "editModifier") ?? "shift";
+			this.doubleClickToEditModifier = Data.load(config.info.slug, "doubleClickToEditModifier") ?? false;
+			this.editModifier = Data.load(config.info.slug, "editModifier") ?? "shift";
 			//Reply
-			this.doubleClickToReply = Data.load(config.info.id, "doubleClickToReply") ?? false;
-			this.doubleClickToReplyModifier = Data.load(config.info.id, "doubleClickToReplyModifier") ?? false;
-			this.replyModifier = Data.load(config.info.id, "replyModifier") ?? "shift";
+			this.doubleClickToReply = Data.load(config.info.slug, "doubleClickToReply") ?? false;
+			this.doubleClickToReplyModifier = Data.load(config.info.slug, "doubleClickToReplyModifier") ?? false;
+			this.replyModifier = Data.load(config.info.slug, "replyModifier") ?? "shift";
 			//Copy
-			this.doubleClickToCopy = Data.load(config.info.id, "doubleClickToCopy") ?? false;
-			this.copyModifier = Data.load(config.info.id, "copyModifier") ?? "shift";
+			this.doubleClickToCopy = Data.load(config.info.slug, "doubleClickToCopy") ?? false;
+			this.copyModifier = Data.load(config.info.slug, "copyModifier") ?? "shift";
 
 		}
 		catch (err) {
@@ -128,7 +116,7 @@ module.exports = class DoubleClickToEdit {
 					onChange: (newState) => {
 						//Saving the new state
 						this.doubleClickToEditModifier = newState;
-						Data.save(config.info.id, "doubleClickToEditModifier", newState);
+						Data.save(config.info.slug, "doubleClickToEditModifier", newState);
 						setEditEnableModifier(newState);
 					}
 					//Discord Is One Of Those
@@ -147,7 +135,7 @@ module.exports = class DoubleClickToEdit {
 						],
 						onChange: (newState) => {
 							this.editModifier = newState.value;
-							Data.save(config.info.id, "editModifier", newState.value);
+							Data.save(config.info.slug, "editModifier", newState.value);
 							setEditModifier(newState.value);
 						}
 					})),
@@ -158,7 +146,7 @@ module.exports = class DoubleClickToEdit {
 					note: "Double click another's message and start replying.",
 					onChange: (newState) => {
 						this.doubleClickToReply = newState;
-						Data.save(config.info.id, "doubleClickToReply", newState);
+						Data.save(config.info.slug, "doubleClickToReply", newState);
 						setReply(newState);
 					}
 				}, "Enable Replying"),
@@ -168,7 +156,7 @@ module.exports = class DoubleClickToEdit {
 					note: "Enable modifier for double clicking to reply",
 					onChange: (newState) => {
 						this.doubleClickToReplyModifier = newState;
-						Data.save(config.info.id, "doubleClickToReplyModifier", newState);
+						Data.save(config.info.slug, "doubleClickToReplyModifier", newState);
 						setReplyEnableModifier(newState);
 					}
 				}, "Enable Reply Modifier"),
@@ -186,7 +174,7 @@ module.exports = class DoubleClickToEdit {
 						],
 						onChange: (newState) => {
 							this.replyModifier = newState.value;
-							Data.save(config.info.id, "replyModifier", newState.value);
+							Data.save(config.info.slug, "replyModifier", newState.value);
 							setReplyModifier(newState.value);
 						}
 					})),
@@ -197,7 +185,7 @@ module.exports = class DoubleClickToEdit {
 					note: "Copy selection before entering edit-mode.",
 					onChange: (newState) => {
 						this.doubleClickToCopy = newState;
-						Data.save(config.info.id, "doubleClickToCopy", newState);
+						Data.save(config.info.slug, "doubleClickToCopy", newState);
 						setCopy(newState);
 					}
 				}, "Enable Copying"),
@@ -215,7 +203,7 @@ module.exports = class DoubleClickToEdit {
 						],
 						onChange: (newState) => {
 							this.copyModifier = newState.value;
-							Data.save(config.info.id, "copyModifier", newState.value);
+							Data.save(config.info.slug, "copyModifier", newState.value);
 							setCopyModifier(newState.value);
 						}
 					}))
