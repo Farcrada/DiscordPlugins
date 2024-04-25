@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.11
+ * @version 2.2.12
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -16,14 +16,6 @@ const React = BdApi.React;
 const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 
 	config = {
-		info: {
-			name: "Hide Channels",
-			id: "HideChannels",
-			description: "Hide channel list from view.",
-			version: "2.2.11",
-			author: "Farcrada",
-			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Channels/HideChannels.plugin.js"
-		},
 		constants: {
 			//The names we need for CSS
 			cssStyle: "HideChannelsStyle",
@@ -38,26 +30,26 @@ const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 module.exports = class HideChannels {
 
 
-	load() {
-		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
-		catch (err) { console.error(config.info.name, "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
-	}
+	constructor(meta) { config.info = meta; }
 
 	start() {
 		try {
+			console.log(config)
 			//React components for settings
 			this.WindowInfoStore = Webpack.getModule(Filters.byKeys("isFocused", "isElementFullScreen"));
 
 			this.KeybindToCombo = Webpack.getModule(Filters.byStrings("numpad plus"), { searchExports: true });
 			this.KeybindToString = Webpack.getModule(Filters.byStrings(".join(\"+\")"), { searchExports: true });
 
+			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
+
 			//The sidebar to "minimize"/hide
 			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebar;
 			this.headerBarClass = Webpack.getModule(Filters.byKeys("chat", "title")).title;
 
 			//And the keybind
-			this.animation = this.checkKeybindLoad(Data.load(config.info.id, "animation")) ?? true;
-			this.keybindSetting = this.checkKeybindLoad(Data.load(config.info.id, "keybind"));
+			this.animation = Data.load(config.info.slug, "animation") ?? true;
+			this.keybindSetting = this.checkKeybindLoad(Data.load(config.info.slug, "keybind"));
 			this.keybind = this.keybindSetting.split('+');
 
 			//Predefine for the eventlistener
@@ -87,33 +79,31 @@ module.exports = class HideChannels {
 	getSettingsPanel() {
 		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
-		if (!this.KeybindRecorder) {
+		if (!this.KeybindRecorder) 
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp);
-			this.FormItem = Webpack.getModule(Filters.byRegex(/(case .\.LEGEND:)/), { searchExports: true });
-			this.SwitchItem = Webpack.getModule(Filters.byStrings("=e.note", "checked:"), { searchExports: true });
-		}
 
 		//Return our keybind settings wrapped in a form item
 		return () => {
 			const [animation, setanimation] = React.useState(this.animation);
 
 			return [
-				React.createElement(this.SwitchItem, {
+				React.createElement(this.UIModule.FormSwitch, {
 					value: animation,
 					note: "Enable the hide animation. Useful if the animation is \"unstatisfactory\".",
 					onChange: (newState) => {
 						//Save new state
 						this.animation = newState;
-						Data.save(config.info.id, "animation", newState);
+						Data.save(config.info.slug, "animation", newState);
 						setanimation(newState);
 
 						//Update CSS to reflect new settings.
 						this.generateCSS()
 					}
 				}, "Enable Hide Animation"),
-				React.createElement(this.FormItem, {
-					tag: "h5"
-				}, "Toggle by keybind:",
+				React.createElement(this.UIModule.FormItem, {
+					//tag: "h5",
+					title: "Toggle by keybind:"
+				},
 					//Containing a keybind recorder.
 					React.createElement(this.KeybindRecorder, {
 						//The `keyup` and `keydown` events register the Ctrl key different
@@ -125,7 +115,7 @@ module.exports = class HideChannels {
 							const keybindString = this.KeybindToString(e).toLowerCase().replace("ctrl", "control");
 
 							//Set the keybind and save it.
-							Data.save(config.info.id, "keybind", keybindString);
+							Data.save(config.info.slug, "keybind", keybindString);
 							//And the keybindSetting
 							this.keybindSetting = keybindString;
 							this.keybind = keybindString.split('+');
@@ -135,7 +125,7 @@ module.exports = class HideChannels {
 	}
 
 	stop() {
-		Patcher.unpatchAll(config.info.id);
+		Patcher.unpatchAll(config.info.slug);
 
 		//Our CSS
 		DOM.removeStyle(config.constants.cssStyle);
@@ -151,7 +141,7 @@ module.exports = class HideChannels {
 	 * @param {object[]} headerBar The module and the export's name (as a string) that contains it
 	 */
 	patchTitleBar(headerBar) {
-		Patcher.before(config.info.id, ...headerBar, (thisObject, methodArguments, returnValue) => {
+		Patcher.before(config.info.slug, ...headerBar, (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array.
 			if (Array.isArray(methodArguments[0]?.children))
@@ -166,9 +156,9 @@ module.exports = class HideChannels {
 					child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
 
 					//Make sure our component isn't already present.
-					if (!methodArguments[0].children.some?.(child => child?.key === config.info.id))
+					if (!methodArguments[0].children.some?.(child => child?.key === config.info.slug))
 						//And since we want to be on the most left of the header bar for style we unshift into the array.
-						methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.id }));
+						methodArguments[0].children.unshift?.(React.createElement(this.hideChannelComponent, { key: config.info.slug }));
 
 
 		});
