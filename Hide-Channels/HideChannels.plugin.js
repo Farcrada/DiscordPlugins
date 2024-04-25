@@ -46,6 +46,7 @@ module.exports = class HideChannels {
 			//The sidebar to "minimize"/hide
 			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebar;
 			this.headerBarClass = Webpack.getModule(Filters.byKeys("chat", "title")).title;
+			this.baseClass = Webpack.getModule(Filters.byKeys("container", "base")).base;
 
 			//And the keybind
 			this.animation = Data.load(config.info.slug, "animation") ?? true;
@@ -330,6 +331,11 @@ module.exports = class HideChannels {
 /* Attached CSS to sidebar */
 .${config.constants.hideElementsName} {
     width: 0 !important;
+}
+
+/* Don't have square border at top left when channels are hidden */
+.${this.baseClass} {
+	border-radius: 8px 0 0 !important;
 }
 
 /* Set animations */
