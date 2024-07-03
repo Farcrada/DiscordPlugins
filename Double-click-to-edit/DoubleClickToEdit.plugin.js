@@ -47,7 +47,7 @@ module.exports = class DoubleClickToEdit {
 			this.copyToClipboard = Webpack.getModule(Filters.byKeys("clipboard", "app")).clipboard.copy;
 
 			//Reply functions
-			this.replyToMessage = Webpack.getModule(Filters.byKeys("replyToMessage")).replyToMessage;
+			this.replyToMessage = Webpack.getModule(m => m?.toString?.()?.replace('\n', '')?.search(/(channel:e,message:n,shouldMention:!)/) > -1, { searchExports: true })
 			this.getChannel = Webpack.getModule(Filters.byKeys("getChannel", "getDMFromUserId")).getChannel;
 
 			//Stores
