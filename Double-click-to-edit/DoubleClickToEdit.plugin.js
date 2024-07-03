@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.8
+ * @version 9.4.9
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
