@@ -40,10 +40,11 @@ const React = BdApi.React,
 
 module.exports = class HideChatIcons {
 
-
 	load() {
-		try { global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl); }
-		catch (err) { console.error(this.getName(), "Failed to reach the ZeresPluginLibrary for Plugin Updater.", err); }
+		// ZeresPluginLibrary is not a Requirement it should not throw an error when not finding it. At most it should log a warning.
+		if(global.ZeresPluginLibrary){
+			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
+		}
 	}
 
 	start() {
