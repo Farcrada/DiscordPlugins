@@ -1,7 +1,7 @@
 /**
  * @name Hide Chat Icons
  * @author Farcrada
- * @version 1.3.5
+ * @version 1.3.6
  * @description Hides the chat icons behind a button.
  * 
  * @invite qH6UWCwfTu
@@ -20,7 +20,7 @@ const React = BdApi.React,
 			name: "Hide Chat Icons",
 			id: "HideChatIcons",
 			description: "Hides the chat icons behind a button.",
-			version: "1.3.5",
+			version: "1.3.6",
 			author: "Farcrada",
 			updateUrl: "https://raw.githubusercontent.com/Farcrada/DiscordPlugins/master/Hide-Chat-Icons/HideChatIcons.plugin.js"
 		},
@@ -39,13 +39,6 @@ const React = BdApi.React,
 
 
 module.exports = class HideChatIcons {
-
-	load() {
-		// ZeresPluginLibrary is not a Requirement it should not throw an error when not finding it. At most it should log a warning.
-		if(global.ZeresPluginLibrary){
-			global.ZeresPluginLibrary.PluginUpdater.checkForUpdate(config.info.name, config.info.version, config.info.updateUrl);
-		}
-	}
 
 	start() {
 		//We use this instead of the constructor() to make sure we only do activity when we are started.
