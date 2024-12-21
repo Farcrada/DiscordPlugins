@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.12
+ * @version 2.2.13
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -329,7 +329,7 @@ module.exports = class HideChannels {
 }
 
 /* Attached CSS to sidebar */
-.${config.constants.hideElementsName} {
+html:not(.visual-refresh) .${config.constants.hideElementsName}.${config.constants.hideElementsName} {
     width: 0 !important;
 }
 
