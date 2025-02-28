@@ -44,7 +44,7 @@ module.exports = class HideChannels {
 			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
 
 			//The sidebar to "minimize"/hide
-			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebar;
+			this.sidebarClass = Webpack.getModule(Filters.byKeys("content", "base")).sidebar;
 			this.headerBarClass = Webpack.getModule(Filters.byKeys("chat", "title")).title;
 			this.baseClass = Webpack.getModule(Filters.byKeys("container", "base")).base;
 
