@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.14
+ * @version 2.2.13
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
