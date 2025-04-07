@@ -46,7 +46,7 @@ module.exports = class HideChannels {
 			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
 
 			//The sidebar to "minimize"/hide
-			this.sidebarClass = Webpack.getModule(Filters.byKeys("content", "base")).sidebarList;
+			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebarList;
 			this.headerBarClass = Webpack.getModule(Filters.byKeys("chat", "title")).title;
 			this.baseClass = Webpack.getModule(Filters.byKeys("container", "base")).base;
 			this.avatarWrapper = Webpack.getModule(Filters.byKeys("avatarWrapper")).avatarWrapper;
@@ -176,13 +176,14 @@ module.exports = class HideChannels {
 	hideChannelComponent = () => {
 		//Only fetch the sidebar on a rerender.
 		const sidebarNode = document.querySelector(`.${this.sidebarClass}`),
-		//When a state updates, it rerenders.
-		[hidden, setHidden] = React.useState(
-			//Check on a rerender where our side bar is so we can correctly reflect this.
-			sidebarNode?.classList.contains(config.constants.hideElementsName));
+			//When a state updates, it rerenders.
+			[hidden, setHidden] = React.useState(
+				//Check on a rerender where our side bar is so we can correctly reflect this.
+				sidebarNode?.classList.contains(config.constants.hideElementsName));
 		//Avatar wrapper element
 		const sidebarAvatar = document.querySelector(`.${this.avatarWrapper}`);
 		const panelsButton = document.querySelector(`.${this.panelsButton}`);
+
 		/**
 		 * Use this to make a despensable easy to use listener with React.
 		 * @param {string} eventName The name of the event to listen for.
@@ -314,39 +315,38 @@ module.exports = class HideChannels {
 		DOM.addStyle(config.constants.cssStyle, `
 /* Button CSS */
 #${config.constants.buttonID} {
-		min-width: 24px;
-		height: 24px;
-		background-position: center !important;
-		background-size: 100% !important;
-		opacity: 0.8;
-		cursor: pointer;
+    min-width: 24px;
+    height: 24px;
+    background-position: center !important;
+    background-size: 100% !important;
+    opacity: 0.8;
+    cursor: pointer;
 }
 
 /* How the button looks */
 .theme-dark #${config.constants.buttonID}.${config.constants.buttonVisible} {
-		background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
 }
 .theme-dark #${config.constants.buttonID}.${config.constants.buttonHidden} {
-		background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
 }
 /* In light theme */
 .theme-light #${config.constants.buttonID}.${config.constants.buttonVisible} {
-		background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTE4LjQxIDE2LjU5TDEzLjgyIDEybDQuNTktNC41OUwxNyA2bC02IDYgNiA2ek02IDZoMnYxMkg2eiIvPjxwYXRoIGQ9Ik0yNCAyNEgwVjBoMjR2MjR6IiBmaWxsPSJub25lIi8+PC9zdmc+) no-repeat;
 }
 .theme-light #${config.constants.buttonID}.${config.constants.buttonHidden} {
-		background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNTY2MCIgd2lkdGg9IjE4cHgiIGhlaWdodD0iMThweCI+PHBhdGggZD0iTTAgMGgyNHYyNEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTUuNTkgNy40MUwxMC4xOCAxMmwtNC41OSA0LjU5TDcgMThsNi02LTYtNnpNMTYgNmgydjEyaC0yeiIvPjwvc3ZnPg==) no-repeat;
 }
 
 /* Attached CSS to sidebar */
 html .${config.constants.hideElementsName}.${config.constants.hideElementsName} {
-		width: 0 !important;
+    width: 0 !important;
 }
-
 html .${config.constants.avatarOverlap}.${config.constants.avatarOverlap}{
-  z-index: 1;
+		z-index: 1;
 }
 html .${config.constants.panelsButtonHidden}.${config.constants.panelsButtonHidden}{
-  display: none !important;
+		display: none !important;
 }
 
 /* Don't have square border at top left when channels are hidden */
@@ -356,7 +356,7 @@ html .${config.constants.panelsButtonHidden}.${config.constants.panelsButtonHidd
 
 /* Set animations */
 .${this.sidebarClass} {
-		${this.animation ? "transition: width 400ms ease;" : ""}
+    ${this.animation ? "transition: width 400ms ease;" : ""}
 	overflow: hidden;
 }`);
 	}
