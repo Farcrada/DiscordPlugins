@@ -1,7 +1,7 @@
 /**
  * @name Hide Channels
  * @author Farcrada
- * @version 2.2.13
+ * @version 2.2.14
  * @description Hide channel list from view.
  *
  * @invite qH6UWCwfTu
@@ -43,7 +43,9 @@ module.exports = class HideChannels {
 			this.KeybindToCombo = Webpack.getModule(Filters.byStrings("numpad plus"), { searchExports: true });
 			this.KeybindToString = Webpack.getModule(Filters.byStrings(".join(\"+\")"), { searchExports: true });
 
-			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
+			this.FormSwitch = Webpack.getModule(Filters.byStrings('labelRow', 'checked'), { searchExports: true });
+			this.FormItem = Webpack.getModule(m => Filters.byStrings('titleId', 'errorId', 'setIsFocused')(m.render), { searchExports: true });
+
 
 			//The sidebar to "minimize"/hide
 			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebarList;
@@ -92,7 +94,7 @@ module.exports = class HideChannels {
 			const [animation, setanimation] = React.useState(this.animation);
 
 			return [
-				React.createElement(this.UIModule.FormSwitch, {
+				React.createElement(this.FormSwitch, {
 					value: animation,
 					note: "Enable the hide animation. Useful if the animation is \"unstatisfactory\".",
 					onChange: (newState) => {
@@ -105,7 +107,7 @@ module.exports = class HideChannels {
 						this.generateCSS()
 					}
 				}, "Enable Hide Animation"),
-				React.createElement(this.UIModule.FormItem, {
+				React.createElement(this.FormItem, {
 					//tag: "h5",
 					title: "Toggle by keybind:"
 				},
