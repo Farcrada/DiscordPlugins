@@ -24,14 +24,11 @@ const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 			buttonHidden: "channelsHidden",
 			buttonVisible: "channelsVisible",
 			avatarOverlap: "avatarOverlap",
-			panelsButtonHidden: "panelsButtonHidden" 
+			panelsButtonHidden: "panelsButtonHidden"
 		}
-	}
-
+	};
 
 module.exports = class HideChannels {
-
-
 	constructor(meta) { config.info = meta; }
 
 	start() {
@@ -45,7 +42,6 @@ module.exports = class HideChannels {
 
 			this.FormSwitch = Webpack.getModule(Filters.byStrings('labelRow', 'checked'), { searchExports: true });
 			this.FormItem = Webpack.getModule(m => Filters.byStrings('titleId', 'errorId', 'setIsFocused')(m?.render), { searchExports: true });
-
 
 			//The sidebar to "minimize"/hide
 			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebarList;
@@ -86,7 +82,7 @@ module.exports = class HideChannels {
 	getSettingsPanel() {
 		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
-		if (!this.KeybindRecorder) 
+		if (!this.KeybindRecorder)
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp);
 
 		//Return our keybind settings wrapped in a form item
@@ -151,14 +147,19 @@ module.exports = class HideChannels {
 		Patcher.before(config.info.slug, ...headerBar, (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array.
+			console.log(methodArguments[0]?.children)
 			if (Array.isArray(methodArguments[0]?.children))
 				if (methodArguments[0].children.some?.(child =>
 					//Make sure we're on the "original" headerbar and not that of a Voice channel's chat, or thread.
 					child?.props?.channel ||
+					//Group chat
+					child?.props?.children?.some?.(child => child?.props?.channel !== undefined) ||
 					//The friends page
 					child?.type?.Header ||
 					//The Nitro page
 					child?.props?.children === "Nitro" ||
+					//The Shop page
+					child?.props?.children?.some?.(child => child?.props?.children === "Shop") ||
 					//Home page of certain servers. This is gonna be broken next update, calling it.
 					child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
 
