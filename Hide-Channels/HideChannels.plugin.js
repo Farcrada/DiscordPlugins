@@ -147,7 +147,6 @@ module.exports = class HideChannels {
 		Patcher.before(config.info.slug, ...headerBar, (thisObject, methodArguments, returnValue) => {
 			//When elements are being re-rendered we need to check if there actually is a place for us.
 			//Along with that we need to check if what we're adding to is an array.
-			console.log(methodArguments[0]?.children)
 			if (Array.isArray(methodArguments[0]?.children))
 				if (methodArguments[0].children.some?.(child =>
 					//Make sure we're on the "original" headerbar and not that of a Voice channel's chat, or thread.
