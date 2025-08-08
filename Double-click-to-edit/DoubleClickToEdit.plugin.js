@@ -55,9 +55,7 @@ module.exports = class DoubleClickToEdit {
 			this.CurrentUserStore = Webpack.getModule(Filters.byKeys("getCurrentUser"));
 
 			//Settings
-			this.FormSwitch = Webpack.getModule(Filters.byStrings('labelRow', 'checked'), { searchExports: true });
-			this.RadioGroup = Webpack.getModule(m => Filters.byKeys('NOT_SET', 'NONE')(m?.Sizes), { searchExports: true });
-			this.FormItem = Webpack.getModule(m => Filters.byStrings('titleId', 'errorId', 'setIsFocused')(m?.render), { searchExports: true });
+			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
 
 			//Events
 			global.document.addEventListener('dblclick', this.doubleclickFunc);
@@ -110,7 +108,7 @@ module.exports = class DoubleClickToEdit {
 
 			return [
 				//Edit
-				React.createElement(this.FormSwitch, {
+				React.createElement(this.UIModule.FormSwitch, {
 					//The state that is loaded with the default value
 					value: editEnableModifier,
 					note: "Enable modifier for double clicking to edit",
@@ -123,11 +121,11 @@ module.exports = class DoubleClickToEdit {
 					}
 					//Discord Is One Of Those
 				}, "Enable Edit Modifier"),
-				React.createElement(this.FormItem, {
+				React.createElement(this.UIModule.FormItem, {
 					disabled: !editEnableModifier,
 					title: "Modifer to hold to edit a message"
 				},
-					React.createElement(this.RadioGroup, {
+					React.createElement(this.UIModule.RadioGroup, {
 						disabled: !editEnableModifier,
 						value: editModifier,
 						options: [
@@ -143,7 +141,7 @@ module.exports = class DoubleClickToEdit {
 					})),
 
 				//Reply
-				React.createElement(this.FormSwitch, {
+				React.createElement(this.UIModule.FormSwitch, {
 					value: reply,
 					note: "Double click another's message and start replying.",
 					onChange: (newState) => {
@@ -152,7 +150,7 @@ module.exports = class DoubleClickToEdit {
 						setReply(newState);
 					}
 				}, "Enable Replying"),
-				React.createElement(this.FormSwitch, {
+				React.createElement(this.UIModule.FormSwitch, {
 					disabled: !reply,
 					value: replyEnableModifier,
 					note: "Enable modifier for double clicking to reply",
@@ -162,11 +160,11 @@ module.exports = class DoubleClickToEdit {
 						setReplyEnableModifier(newState);
 					}
 				}, "Enable Reply Modifier"),
-				React.createElement(this.FormItem, {
+				React.createElement(this.UIModule.FormItem, {
 					disabled: (!reply || !replyEnableModifier),
 					title: "Modifier to hold when replying to a message"
 				},
-					React.createElement(this.RadioGroup, {
+					React.createElement(this.UIModule.RadioGroup, {
 						disabled: (!reply || !replyEnableModifier),
 						value: replyModifier,
 						options: [
@@ -182,7 +180,7 @@ module.exports = class DoubleClickToEdit {
 					})),
 
 				//Copy
-				React.createElement(this.FormSwitch, {
+				React.createElement(this.UIModule.FormSwitch, {
 					value: copy,
 					note: "Copy selection before entering edit-mode.",
 					onChange: (newState) => {
@@ -191,11 +189,11 @@ module.exports = class DoubleClickToEdit {
 						setCopy(newState);
 					}
 				}, "Enable Copying"),
-				React.createElement(this.FormItem, {
+				React.createElement(this.UIModule.FormItem, {
 					disabled: !copy,
 					title: "Modifier to hold before copying text"
 				},
-					React.createElement(this.RadioGroup, {
+					React.createElement(this.UIModule.RadioGroup, {
 						disabled: !copy,
 						value: copyModifier,
 						options: [
