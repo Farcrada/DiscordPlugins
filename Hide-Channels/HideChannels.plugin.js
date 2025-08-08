@@ -22,14 +22,13 @@ const { Webpack, Webpack: { Filters }, Data, DOM, Patcher } = BdApi,
 			hideElementsName: "hideChannelElement",
 			buttonID: "toggleChannels",
 			buttonHidden: "channelsHidden",
-			buttonVisible: "channelsVisible"
+			buttonVisible: "channelsVisible",
+			avatarOverlap: "avatarOverlap",
+			panelsButtonHidden: "panelsButtonHidden"
 		}
-	}
-
+	};
 
 module.exports = class HideChannels {
-
-
 	constructor(meta) { config.info = meta; }
 
 	start() {
@@ -41,12 +40,15 @@ module.exports = class HideChannels {
 			this.KeybindToCombo = Webpack.getModule(Filters.byStrings("numpad plus"), { searchExports: true });
 			this.KeybindToString = Webpack.getModule(Filters.byStrings(".join(\"+\")"), { searchExports: true });
 
-			this.UIModule = Webpack.getModule(m => m.FormItem && m.RadioGroup);
+			this.FormSwitch = Webpack.getModule(Filters.byStrings('labelRow', 'checked'), { searchExports: true });
+			this.FormItem = Webpack.getModule(m => Filters.byStrings('titleId', 'errorId', 'setIsFocused')(m?.render), { searchExports: true });
 
 			//The sidebar to "minimize"/hide
-			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebar;
+			this.sidebarClass = Webpack.getModule(Filters.byKeys("container", "base")).sidebarList;
 			this.headerBarClass = Webpack.getModule(Filters.byKeys("chat", "title")).title;
 			this.baseClass = Webpack.getModule(Filters.byKeys("container", "base")).base;
+			this.avatarWrapper = Webpack.getModule(Filters.byKeys("avatarWrapper")).avatarWrapper;
+			this.panelsButton = Webpack.getModule(Filters.byKeys("avatarWrapper")).buttons;
 
 			//And the keybind
 			this.animation = Data.load(config.info.slug, "animation") ?? true;
@@ -80,7 +82,7 @@ module.exports = class HideChannels {
 	getSettingsPanel() {
 		//Settings window is lazy loaded so we need to cache this after it's been loaded (i.e. open settings).
 		//This also allows for a (delayed) call to retrieve a way to prompt a Form
-		if (!this.KeybindRecorder) 
+		if (!this.KeybindRecorder)
 			this.KeybindRecorder = Webpack.getModule(m => m.prototype?.cleanUp);
 
 		//Return our keybind settings wrapped in a form item
@@ -88,7 +90,7 @@ module.exports = class HideChannels {
 			const [animation, setanimation] = React.useState(this.animation);
 
 			return [
-				React.createElement(this.UIModule.FormSwitch, {
+				React.createElement(this.FormSwitch, {
 					value: animation,
 					note: "Enable the hide animation. Useful if the animation is \"unstatisfactory\".",
 					onChange: (newState) => {
@@ -101,7 +103,7 @@ module.exports = class HideChannels {
 						this.generateCSS()
 					}
 				}, "Enable Hide Animation"),
-				React.createElement(this.UIModule.FormItem, {
+				React.createElement(this.FormItem, {
 					//tag: "h5",
 					title: "Toggle by keybind:"
 				},
@@ -149,10 +151,14 @@ module.exports = class HideChannels {
 				if (methodArguments[0].children.some?.(child =>
 					//Make sure we're on the "original" headerbar and not that of a Voice channel's chat, or thread.
 					child?.props?.channel ||
+					//Group chat
+					child?.props?.children?.some?.(child => child?.props?.channel !== undefined) ||
 					//The friends page
 					child?.type?.Header ||
 					//The Nitro page
 					child?.props?.children === "Nitro" ||
+					//The Shop page
+					child?.props?.children?.some?.(child => child?.props?.children === "Shop") ||
 					//Home page of certain servers. This is gonna be broken next update, calling it.
 					child?.props?.children?.some?.(grandChild => typeof grandChild === 'string')))
 
@@ -176,6 +182,9 @@ module.exports = class HideChannels {
 			[hidden, setHidden] = React.useState(
 				//Check on a rerender where our side bar is so we can correctly reflect this.
 				sidebarNode?.classList.contains(config.constants.hideElementsName));
+		//Avatar wrapper element
+		const sidebarAvatar = document.querySelector(`.${this.avatarWrapper}`);
+		const panelsButton = document.querySelector(`.${this.panelsButton}`);
 
 		/**
 		 * Use this to make a despensable easy to use listener with React.
@@ -205,7 +214,6 @@ module.exports = class HideChannels {
 		 * @returns The passed state in reverse.
 		 */
 		function toggleSidebar(sidebar) {
-
 			/**
 			 * Adds and removes our CSS to make our sidebar appear and disappear.
 			 * @param {boolean} state State that determines the toggle.
@@ -213,13 +221,17 @@ module.exports = class HideChannels {
 			 */
 			return state => {
 				//If it is showing, we need to hide it.
-				if (!state)
+				if (!state) {
 					//We hide it through CSS by adding a class.
 					sidebar?.classList.add(config.constants.hideElementsName);
-				//If it is hidden, we need to show it.
-				else
+					sidebarAvatar?.classList.add(config.constants.avatarOverlap);
+					panelsButton?.classList.add(config.constants.panelsButtonHidden);
+				} else {
+					//If it is hidden, we need to show it.
 					sidebar?.classList.remove(config.constants.hideElementsName);
-
+					sidebarAvatar?.classList.remove(config.constants.avatarOverlap);
+					panelsButton?.classList.remove(config.constants.panelsButtonHidden);
+				}
 				return !state;
 			};
 		}
@@ -329,8 +341,14 @@ module.exports = class HideChannels {
 }
 
 /* Attached CSS to sidebar */
-html:not(.visual-refresh) .${config.constants.hideElementsName}.${config.constants.hideElementsName} {
+html .${config.constants.hideElementsName}.${config.constants.hideElementsName} {
     width: 0 !important;
+}
+html .${config.constants.avatarOverlap}.${config.constants.avatarOverlap}{
+		z-index: 1;
+}
+html .${config.constants.panelsButtonHidden}.${config.constants.panelsButtonHidden}{
+		display: none !important;
 }
 
 /* Don't have square border at top left when channels are hidden */
