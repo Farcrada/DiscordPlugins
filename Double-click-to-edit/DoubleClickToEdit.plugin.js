@@ -220,8 +220,14 @@ module.exports = class DoubleClickToEdit {
 			return;
 
 		//Target the message
-		const messageDiv = e.target.closest('li > [class^=message]');
-
+		const messageDiv = e.target.closest(
+			'[data-list-item-id^="chat-messages"], ' +
+			'article[class*="message"], ' +
+			'div[class*="messageContainer"], ' +
+			'li > div[class*="message"], ' +
+			'li[class*="message"]'
+		);
+		
 		//If it finds nothing, null it.
 		if (!messageDiv)
 			return;
