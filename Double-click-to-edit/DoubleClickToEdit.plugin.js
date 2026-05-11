@@ -1,7 +1,7 @@
 /**
  * @name Double Click To Edit
  * @author Farcrada, original idea by Jiiks
- * @version 9.4.10
+ * @version 9.4.11
  * @description Double click a message you wrote to quickly edit it.
  * 
  * @invite qH6UWCwfTu
@@ -40,15 +40,15 @@ module.exports = class DoubleClickToEdit {
 	start() {
 		try {
 			//Classes
-			this.selectedClass = Webpack.getModule(Filters.byKeys("message", "selected")).selected;
-			this.messagesWrapper = Webpack.getModule(Filters.byKeys("empty", "messagesWrapper")).messagesWrapper;
+			this.selectedClass = Webpack.getModule(Filters.byKeys("message", "selected"))?.selected;
 
 			//Copy to clipboard
-			this.copyToClipboard = Webpack.getModule(Filters.byKeys("clipboard", "app")).clipboard.copy;
+			this.copyToClipboard = Webpack.getModule(Filters.byKeys("clipboard", "app"))?.clipboard?.copy;
 
 			//Reply functions
-			this.replyToMessage = Webpack.getModule(m => m?.toString?.()?.replace('\n', '')?.search(/(channel:e,message:n,shouldMention:!)/) > -1, { searchExports: true })
-			this.getChannel = Webpack.getModule(Filters.byKeys("getChannel", "getDMFromUserId")).getChannel;
+			const ReplyActions = Webpack.getModule(Filters.byKeys("createPendingReply"));
+			this.createPendingReply = ReplyActions?.createPendingReply;
+			this.getChannel = Webpack.getModule(Filters.byKeys("getChannel", "getDMFromUserId"))?.getChannel;
 
 			//Stores
 			this.MessageStore = Webpack.getModule(Filters.byKeys("receiveMessage", "editMessage"));
@@ -220,8 +220,14 @@ module.exports = class DoubleClickToEdit {
 			return;
 
 		//Target the message
-		const messageDiv = e.target.closest('li > [class^=message]');
-
+		const messageDiv = e.target.closest(
+			'[data-list-item-id^="chat-messages"], ' +
+			'article[class*="message"], ' +
+			'div[class*="messageContainer"], ' +
+			'li > div[class*="message"], ' +
+			'li[class*="message"]'
+		);
+		
 		//If it finds nothing, null it.
 		if (!messageDiv)
 			return;
@@ -256,8 +262,16 @@ module.exports = class DoubleClickToEdit {
 		//If a modifier is enabled, check if the key is held, otherwise ignore.
 		if ((this.doubleClickToEditModifier ? editKeyHeld : true) && message.author.id === this.CurrentUserStore.getCurrentUser().id)
 			this.MessageStore.startEditMessage(message.channel_id, message.id, message.content);
-		else if ((this.doubleClickToReplyModifier ? replyKeyHeld : true) && this.doubleClickToReply)
-			this.replyToMessage(this.getChannel(message.channel_id), message, e);
+		else if ((this.doubleClickToReplyModifier ? replyKeyHeld : true) && this.doubleClickToReply) {
+			const channel = this.getChannel(message.channel_id);
+			if (channel && this.createPendingReply)
+				this.createPendingReply({
+					channel,
+					message,
+					shouldMention: true,
+					showMentionToggle: channel.guild_id !== null
+				});
+		}
 	}
 
 	/**
