@@ -176,6 +176,9 @@ module.exports = class DoubleClickToEdit {
 	}
 
 	handler(e) {
+		if (e.target?.closest?.('textarea, input, [contenteditable="true"]'))
+			return;
+
 		if (typeof (e?.target?.className) !== typeof ("") ||
 			ignore.some(nameOfClass => e?.target?.className?.indexOf?.(nameOfClass) > -1))
 			return;
